@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rafly - Okul Kütüphane Yönetim Sistemi | Dijital Kütüphane Uygulaması</title>
+<meta name="description" content="Rafly ile okul kütüphanenizi dijitalleştirin. Barkod ile kitap ekleme, öğrenci takibi, ödünç verme, rezervasyon ve daha fazlası. Ücretsiz okul kütüphane uygulaması.">
+<meta name="keywords" content="okul kütüphane uygulaması, kütüphane yönetim sistemi, dijital kütüphane, kitap takip uygulaması, okul kitap yönetimi, barkod kitap tarama, öğrenci kütüphane sistemi, kütüphane otomasyonu, ücretsiz kütüphane programı">
+<meta name="author" content="Rafly">
+<meta name="robots" content="index, follow">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="canonical" href="https://raflylib.online/">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Rafly - Okul Kütüphane Yönetim Sistemi">
+<meta property="og:description" content="Okul kütüphanenizi dijitalleştirin. Barkod tarama, kitap takibi, öğrenci yönetimi tek uygulamada.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="tr_TR">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Rafly - Okul Kütüphane Yönetim Sistemi">
+<meta name="twitter:description" content="Okul kütüphanenizi dijitalleştirin. Barkod tarama, kitap takibi, öğrenci yönetimi tek uygulamada.">
+
+<!-- Structured Data -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "MobileApplication",
+  "name": "Rafly",
+  "operatingSystem": "Android",
+  "applicationCategory": "EducationalApplication",
+  "description": "Okul kütüphanelerini dijital ortama taşıyan modern kütüphane yönetim sistemi.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "TRY"
+  },
+  "author": {
+    "@type": "Organization",
+    "name": "Rafly"
+  }
+}
+</script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --primary:#1A3366;
+  --primary-light:#2A4A80;
+  --primary-dark:#0F1F3D;
+  --accent:#3B82F6;
+  --accent-light:#60A5FA;
+  --bg:#F9FAFB;
+  --surface:#FFFFFF;
+  --text:#111827;
+  --text-secondary:#6B7280;
+  --border:#E5E7EB;
+  --success:#16A34A;
+  --warning:#F59E0B;
+  --gradient:linear-gradient(135deg, #1A3366 0%, #2A4A80 50%, #3B82F6 100%);
+  --gradient-subtle:linear-gradient(135deg, rgba(26,51,102,0.03) 0%, rgba(59,130,246,0.06) 100%);
+}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;color:var(--text);background:var(--bg);line-height:1.7;overflow-x:hidden}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(229,231,235,0.5);transition:all .3s}
+nav.scrolled{box-shadow:0 1px 20px rgba(0,0,0,0.06)}
+.nav-inner{max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:72px}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--primary);font-weight:800;font-size:22px}
+.nav-logo img{width:36px;height:36px;object-fit:contain}
+.nav-links{display:flex;align-items:center;gap:32px;list-style:none}
+.nav-links a{text-decoration:none;color:var(--text-secondary);font-size:14px;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:var(--primary)}
+.nav-cta{background:var(--primary);color:#fff!important;padding:10px 24px;border-radius:10px;font-weight:600;transition:all .2s}
+.nav-cta:hover{background:var(--primary-light);transform:translateY(-1px);box-shadow:0 4px 16px rgba(26,51,102,0.3)}
+.mobile-toggle{display:none;background:none;border:none;cursor:pointer;padding:8px}
+.mobile-toggle span{display:block;width:24px;height:2px;background:var(--text);margin:6px 0;border-radius:2px;transition:all .3s}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden;padding:120px 24px 80px}
+.hero::before{content:'';position:absolute;top:-40%;right:-20%;width:800px;height:800px;background:radial-gradient(circle,rgba(59,130,246,0.08) 0%,transparent 70%);border-radius:50%;pointer-events:none}
+.hero::after{content:'';position:absolute;bottom:-30%;left:-15%;width:600px;height:600px;background:radial-gradient(circle,rgba(26,51,102,0.06) 0%,transparent 70%);border-radius:50%;pointer-events:none}
+.hero-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;position:relative;z-index:1}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(26,51,102,0.06);color:var(--primary);padding:8px 16px;border-radius:100px;font-size:13px;font-weight:600;margin-bottom:24px;border:1px solid rgba(26,51,102,0.1)}
+.hero-badge span{width:8px;height:8px;background:var(--success);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hero h1{font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1.15;color:var(--primary-dark);margin-bottom:20px;letter-spacing:-0.02em}
+.hero h1 .highlight{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{font-size:18px;color:var(--text-secondary);margin-bottom:36px;max-width:520px;line-height:1.8}
+.hero-actions{display:flex;gap:16px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:16px 32px;border-radius:14px;font-size:16px;font-weight:600;text-decoration:none;transition:all .3s;cursor:pointer;border:none}
+.btn-primary{background:var(--primary);color:#fff;box-shadow:0 4px 24px rgba(26,51,102,0.25)}
+.btn-primary:hover{background:var(--primary-light);transform:translateY(-2px);box-shadow:0 8px 32px rgba(26,51,102,0.35)}
+.btn-secondary{background:var(--surface);color:var(--text);border:1.5px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+.btn-secondary:hover{border-color:var(--primary);color:var(--primary);transform:translateY(-2px)}
+.btn svg{width:20px;height:20px}
+.hero-visual{display:flex;justify-content:center;position:relative}
+.hero-video-wrapper{width:100%;max-width:540px;border-radius:20px;overflow:hidden;box-shadow:0 40px 80px rgba(26,51,102,0.25),0 0 0 1px rgba(26,51,102,0.08);position:relative;background:var(--primary-dark)}
+.hero-video-wrapper::before{content:'';display:block;padding-top:56.25%}
+.hero-video-wrapper iframe,.hero-video-wrapper .video-placeholder{position:absolute;top:0;left:0;width:100%;height:100%;border:none}
+.video-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--primary-dark) 0%,var(--primary) 50%,var(--accent) 100%);cursor:pointer;transition:all .3s}
+.video-placeholder:hover{filter:brightness(1.1)}
+.video-play-btn{width:80px;height:80px;background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:16px;border:2px solid rgba(255,255,255,0.3);transition:all .3s}
+.video-placeholder:hover .video-play-btn{background:rgba(255,255,255,0.25);transform:scale(1.08)}
+.video-play-btn svg{margin-left:4px}
+.video-placeholder p{color:rgba(255,255,255,0.9);font-size:15px;font-weight:600}
+.video-placeholder span{color:rgba(255,255,255,0.5);font-size:13px;margin-top:4px}
+
+/* STATS */
+.stats{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:48px 24px}
+.stats-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:32px;text-align:center}
+.stat-item h3{font-size:clamp(28px,4vw,40px);font-weight:800;color:var(--primary);margin-bottom:4px}
+.stat-item p{font-size:14px;color:var(--text-secondary);font-weight:500}
+
+/* FEATURES */
+.features{padding:120px 24px;position:relative}
+.features::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:var(--gradient-subtle);pointer-events:none}
+.section-inner{max-width:1200px;margin:0 auto;position:relative;z-index:1}
+.section-header{text-align:center;margin-bottom:64px}
+.section-tag{display:inline-block;background:rgba(26,51,102,0.06);color:var(--primary);padding:6px 16px;border-radius:100px;font-size:13px;font-weight:600;margin-bottom:16px;border:1px solid rgba(26,51,102,0.1)}
+.section-header h2{font-size:clamp(28px,4vw,40px);font-weight:800;color:var(--primary-dark);margin-bottom:12px;letter-spacing:-0.01em}
+.section-header p{font-size:17px;color:var(--text-secondary);max-width:560px;margin:0 auto}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.feature-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px;transition:all .3s;position:relative;overflow:hidden}
+.feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gradient);opacity:0;transition:opacity .3s}
+.feature-card:hover{transform:translateY(-4px);box-shadow:0 20px 40px rgba(0,0,0,0.06);border-color:transparent}
+.feature-card:hover::before{opacity:1}
+.feature-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;font-size:24px}
+.feature-icon.scan{background:rgba(59,130,246,0.1)}
+.feature-icon.book{background:rgba(22,163,74,0.1)}
+.feature-icon.student{background:rgba(245,158,11,0.1)}
+.feature-icon.reserve{background:rgba(139,92,246,0.1)}
+.feature-icon.notify{background:rgba(239,68,68,0.1)}
+.feature-icon.export{background:rgba(20,184,166,0.1)}
+.feature-card h3{font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px}
+.feature-card p{font-size:14px;color:var(--text-secondary);line-height:1.7}
+
+/* HOW IT WORKS */
+.how{padding:120px 24px;background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:48px;position:relative}
+.steps::before{content:'';position:absolute;top:40px;left:calc(16.66% + 24px);right:calc(16.66% + 24px);height:2px;background:var(--border)}
+.step{text-align:center;position:relative}
+.step-number{width:80px;height:80px;border-radius:50%;background:var(--gradient);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;margin:0 auto 24px;position:relative;z-index:1;box-shadow:0 8px 24px rgba(26,51,102,0.25)}
+.step h3{font-size:18px;font-weight:700;margin-bottom:8px}
+.step p{font-size:14px;color:var(--text-secondary)}
+
+/* ROLES */
+.roles{padding:120px 24px}
+.roles-grid{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.role-card{border-radius:24px;padding:48px;position:relative;overflow:hidden}
+.role-card.admin{background:linear-gradient(135deg,#1A3366 0%,#2A4A80 100%);color:#fff}
+.role-card.student{background:linear-gradient(135deg,#F0F7FF 0%,#E8F4FD 100%);color:var(--text)}
+.role-card h3{font-size:24px;font-weight:700;margin-bottom:8px}
+.role-card .subtitle{font-size:15px;opacity:.8;margin-bottom:28px}
+.role-card ul{list-style:none;display:flex;flex-direction:column;gap:14px}
+.role-card li{display:flex;align-items:flex-start;gap:10px;font-size:14px;line-height:1.6}
+.role-card li svg{width:20px;height:20px;flex-shrink:0;margin-top:2px}
+.role-card.admin li svg{color:rgba(255,255,255,0.8)}
+.role-card.student li svg{color:var(--primary)}
+
+/* FAQ */
+.faq{padding:120px 24px;background:var(--surface);border-top:1px solid var(--border)}
+.faq-list{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.faq-item{background:var(--bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:all .3s}
+.faq-item.active{border-color:var(--primary);box-shadow:0 4px 16px rgba(26,51,102,0.08)}
+.faq-q{padding:20px 24px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:15px}
+.faq-q svg{transition:transform .3s;flex-shrink:0;margin-left:16px}
+.faq-item.active .faq-q svg{transform:rotate(180deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.faq-item.active .faq-a{max-height:200px}
+.faq-a p{padding:0 24px 20px;font-size:14px;color:var(--text-secondary);line-height:1.8}
+
+/* CTA */
+.cta{padding:120px 24px}
+.cta-box{max-width:900px;margin:0 auto;background:var(--gradient);border-radius:32px;padding:72px 48px;text-align:center;position:relative;overflow:hidden}
+.cta-box::before{content:'';position:absolute;top:-50%;right:-20%;width:500px;height:500px;background:radial-gradient(circle,rgba(255,255,255,0.08) 0%,transparent 70%);border-radius:50%}
+.cta-box h2{font-size:clamp(28px,4vw,36px);font-weight:800;color:#fff;margin-bottom:12px;position:relative}
+.cta-box p{font-size:17px;color:rgba(255,255,255,0.8);margin-bottom:36px;position:relative}
+.btn-white{background:#fff;color:var(--primary);padding:18px 40px;border-radius:14px;font-size:17px;font-weight:700;box-shadow:0 8px 32px rgba(0,0,0,0.15);display:inline-flex;align-items:center;gap:10px;text-decoration:none;transition:all .3s;position:relative}
+.btn-white:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(0,0,0,0.25)}
+
+/* FOOTER */
+footer{background:var(--primary-dark);color:rgba(255,255,255,0.7);padding:64px 24px 32px}
+.footer-inner{max-width:1200px;margin:0 auto}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:48px;margin-bottom:48px}
+.footer-brand h3{color:#fff;font-size:22px;font-weight:800;margin-bottom:12px}
+.footer-brand p{font-size:14px;line-height:1.8}
+.footer-col h4{color:#fff;font-size:14px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em}
+.footer-col a{display:block;color:rgba(255,255,255,0.6);text-decoration:none;font-size:14px;padding:4px 0;transition:color .2s}
+.footer-col a:hover{color:#fff}
+.footer-bottom{border-top:1px solid rgba(255,255,255,0.1);padding-top:24px;display:flex;justify-content:space-between;font-size:13px}
+
+/* ANIMATIONS */
+.reveal{opacity:0;transform:translateY(30px);transition:all .7s cubic-bezier(0.16,1,0.3,1)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* MOBILE */
+@media(max-width:1024px){
+  .hero-inner{grid-template-columns:1fr;text-align:center;gap:48px}
+  .hero p{margin:0 auto 36px}
+  .hero-actions{justify-content:center}
+  .features-grid{grid-template-columns:repeat(2,1fr)}
+  .roles-grid{grid-template-columns:1fr}
+  .footer-top{grid-template-columns:1fr 1fr}
+}
+@media(max-width:768px){
+  .nav-links{display:none;position:absolute;top:72px;left:0;right:0;background:var(--surface);border-bottom:1px solid var(--border);flex-direction:column;padding:24px;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,0.08)}
+  .nav-links.open{display:flex}
+  .mobile-toggle{display:block}
+  .features-grid{grid-template-columns:1fr}
+  .stats-inner{grid-template-columns:repeat(2,1fr)}
+  .steps{grid-template-columns:1fr;gap:32px}
+  .steps::before{display:none}
+  .hero-phone{width:240px;height:480px}
+  .hero-float{display:none}
+  .cta-box{padding:48px 24px}
+  .footer-top{grid-template-columns:1fr}
+  .footer-bottom{flex-direction:column;gap:8px;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <img src="logo.png" alt="Rafly Logo">
+      Rafly
+    </a>
+    <button class="mobile-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <ul class="nav-links">
+      <li><a href="#features">Ozellikler</a></li>
+      <li><a href="#how">Nasil Calisir</a></li>
+      <li><a href="#roles">Kimler Icin</a></li>
+      <li><a href="#faq">SSS</a></li>
+      <li><a href="#pricing" class="nav-cta">Teklif Al</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="hero-badge"><span></span> Okulunuz icin hazir</div>
+      <h1>Okul kutuphanenizi <span class="highlight">dijitallestirin</span></h1>
+      <p>Kagit defterler ve karisik tablolar yerine, tek bir uygulama ile tum kutuphane islemlerinizi yonetin. Barkod tarama, ogrenci takibi, rezervasyonlar ve daha fazlasi.</p>
+      <div class="hero-actions">
+        <a href="#pricing" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Teklif Alin
+        </a>
+        <a href="#features" class="btn btn-secondary">Kesfet</a>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="hero-video-wrapper">
+        <!-- VIDEO HAZIRLAYINCA: Asagidaki placeholder'i sil, iframe'in comment'ini kaldir -->
+        <!-- <iframe src="https://www.youtube.com/embed/VIDEO_ID?rel=0&modestbranding=1&autoplay=0" title="Rafly Tanitim Videosu" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe> -->
+        <div class="video-placeholder" onclick="this.parentElement.innerHTML='<iframe src=\'https://www.youtube.com/embed/VIDEO_ID?rel=0&autoplay=1\' title=\'Rafly Tanitim\' allow=\'accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture\' allowfullscreen style=\'position:absolute;top:0;left:0;width:100%;height:100%;border:none\'></iframe>'">
+          <div class="video-play-btn">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="#fff"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          </div>
+          <p>Rafly Tanitim Videosu</p>
+          <span>Izlemek icin tiklayin</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats reveal">
+  <div class="stats-inner">
+    <div class="stat-item"><h3>50+</h3><p>Aktif Okul</p></div>
+    <div class="stat-item"><h3>30sn</h3><p>Kurulum Suresi</p></div>
+    <div class="stat-item"><h3>7/24</h3><p>Erisim</p></div>
+    <div class="stat-item"><h3>256bit</h3><p>SSL Sifreleme</p></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <span class="section-tag">Ozellikler</span>
+      <h2>Kutuphaneniz icin ihtiyaciniz olan her sey</h2>
+      <p>Tek uygulama ile kitap yonetimi, ogrenci takibi ve tum kutuphane operasyonlarinizi dijitallestirin.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal">
+        <div class="feature-icon scan">&#128247;</div>
+        <h3>Barkod ile Kitap Ekleme</h3>
+        <p>Kamerayi kitabin barkoduna tutun, ISBN otomatik taransin. Kitap bilgileri aninda doldurulur. Manuel girise de destek verir.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon book">&#128218;</div>
+        <h3>Envanter Yonetimi</h3>
+        <p>Tum kitaplarinizi tek ekrandan yonetin. Stok takibi, adet guncelleme, kategori duzenleme ve arama ozellikleri.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon student">&#127891;</div>
+        <h3>Ogrenci Yonetimi</h3>
+        <p>Ogrenci listesini Excel'den iceri aktarin veya tek tek ekleyin. Sinif bazli filtreleme ve ogrenci gecmisi takibi.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon reserve">&#128197;</div>
+        <h3>Odunc Verme &amp; Rezervasyon</h3>
+        <p>Barkod okutarak aninda odunc verin. Ogrenciler uygulamadan kitap rezerve edebilir. Tum islemler kayit altinda.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon notify">&#128276;</div>
+        <h3>Bildirimler &amp; Duyurular</h3>
+        <p>Iade tarihi yaklasan ogrencilere otomatik hatirlatma. Sinif ve seviye bazli duyuru olusturup gonderme.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon export">&#128196;</div>
+        <h3>Rapor &amp; Disa Aktarma</h3>
+        <p>Kitap listenizi Excel veya PDF olarak indirin. Envanter raporlari ile kutuphanenizin durumunu aninda gorun.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <span class="section-tag">Nasil Calisir</span>
+      <h2>3 adimda kutuphane yonetimi</h2>
+      <p>Kurulum dakikalar icinde tamamlanir. Hemen kullanmaya baslayin.</p>
+    </div>
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-number">1</div>
+        <h3>Uygulamayi Indirin</h3>
+        <p>Google Play'den Rafly'yi indirin ve okul kodunuzla giris yapin.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-number">2</div>
+        <h3>Kitaplari Ekleyin</h3>
+        <p>Barkod tarayarak veya manuel girerek kitaplarinizi sisteme kaydedin.</p>
+      </div>
+      <div class="step reveal">
+        <div class="step-number">3</div>
+        <h3>Yonetmeye Baslayin</h3>
+        <p>Odunc verme, iade, rezervasyon ve duyuru islemlerini tek ekrandan yonetin.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROLES -->
+<section class="roles" id="roles">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <span class="section-tag">Kimler Icin</span>
+      <h2>Herkes icin ayri deneyim</h2>
+      <p>Yoneticiler ve ogrenciler farkli panellerle ayni sistemi kullanir.</p>
+    </div>
+    <div class="roles-grid">
+      <div class="role-card admin reveal">
+        <h3>Yetkili Paneli</h3>
+        <p class="subtitle">Ogretmenler ve kutuphane sorumlulari icin</p>
+        <ul>
+          <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Barkod ile kitap ekleme ve envanter yonetimi</li>
+          <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Ogrenci listesi ve sinif bazli yonetim</li>
+          <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Odunc verme, iade ve rezervasyon islemleri</li>
+          <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Excel/PDF rapor ve disa aktarma</li>
+          <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Sinif bazli duyuru olusturma</li>
+        </ul>
+      </div>
+      <div class="role-card student reveal">
+        <h3>Ogrenci Paneli</h3>
+        <p class="subtitle">Ogrenciler ve ogretmenler icin</p>
+        <ul>
+          <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Kutuphane kitaplarini goruntuleme ve arama</li>
+          <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Online kitap rezervasyonu</li>
+          <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Odunc gecmisi ve iade tarihi takibi</li>
+          <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Kisisel profil olusturma</li>
+          <li><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Okul duyurularini goruntuleme</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="section-inner">
+    <div class="section-header reveal">
+      <span class="section-tag">Sikca Sorulan Sorular</span>
+      <h2>Merak edilenler</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item reveal">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('active')">
+          Rafly'nin fiyati nedir?
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="faq-a"><p>Rafly, okulunuzun ihtiyaclarina gore farkli paketler sunmaktadir. Ogrenci sayisi ve kullanim kapsamina gore fiyatlandirma yapilmaktadir. Detayli bilgi ve okulunuza ozel teklif icin bizimle iletisime gecin.</p></div>
+      </div>
+      <div class="faq-item reveal">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('active')">
+          Okulumuzu nasil kayit edebiliriz?
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="faq-a"><p>Uygulamayi indirdikten sonra yetkili girisi ile okulunuzun kodunu girerek hemen kullanmaya baslayabilirsiniz. Ayrica bir kayit sureci icin bize e-posta gonderebilirsiniz.</p></div>
+      </div>
+      <div class="faq-item reveal">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('active')">
+          Verilerimiz guvenli mi?
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="faq-a"><p>Evet. Tum veriler 256-bit SSL sifreleme ile iletilir, sifreler bcrypt ile hashlenir ve veriler Google Cloud altyapisinda guvenle saklanir.</p></div>
+      </div>
+      <div class="faq-item reveal">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('active')">
+          Mevcut kitap listemizi iceri aktarabilir miyiz?
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="faq-a"><p>Ogrenci listelerinizi Excel dosyasindan toplu olarak iceri aktarabilirsiniz. Kitaplar icin barkod tarama ile hizli ekleme yapabilirsiniz.</p></div>
+      </div>
+      <div class="faq-item reveal">
+        <div class="faq-q" onclick="this.parentElement.classList.toggle('active')">
+          Hangi cihazlarda calisir?
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="faq-a"><p>Rafly su anda Android cihazlarda kullanilabilir. Android 5.0 ve uzeri tum telefonlarda ve tabletlerde sorunsuz calisir.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="cta" id="pricing">
+  <div class="cta-box reveal">
+    <h2>Okulunuza ozel fiyat teklifi alin</h2>
+    <p>Ogrenci sayiniza ve ihtiyaclariniza gore size en uygun paketi belirleyelim. Ucretsiz demo ile Rafly'yi yakindan taniyin.</p>
+    <a href="mailto:emirsaki14@gmail.com?subject=Rafly%20Fiyat%20Teklifi&body=Merhaba%2C%0A%0AOkulumuz%20icin%20Rafly%20hakkinda%20bilgi%20almak%20istiyoruz.%0A%0AOkul%20Adi%3A%20%0ATahmini%20Ogrenci%20Sayisi%3A%20%0AIletisim%20Numarasi%3A%20" class="btn-white">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+      Teklif Icin Bize Ulasin
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <h3>Rafly</h3>
+        <p>Okul kutuphanelerini dijital ortama tasiyan modern kutuphane yonetim sistemi.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Uygulama</h4>
+        <a href="#features">Ozellikler</a>
+        <a href="#how">Nasil Calisir</a>
+        <a href="#pricing">Teklif Al</a>
+      </div>
+      <div class="footer-col">
+        <h4>Destek</h4>
+        <a href="#faq">SSS</a>
+        <a href="mailto:emirsaki14@gmail.com">Iletisim</a>
+        <a href="support.html">Yardim Merkezi</a>
+      </div>
+      <div class="footer-col">
+        <h4>Yasal</h4>
+        <a href="privacy.html">Gizlilik Politikasi</a>
+        <a href="terms.html">Kullanim Sartlari</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2026 Rafly. Tum haklari saklidir.</span>
+      <span>emirsaki14@gmail.com</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Scroll nav shadow
+const nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>{nav.classList.toggle('scrolled',window.scrollY>20)});
+
+// Reveal on scroll
+const observer=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');observer.unobserve(e.target)}})},{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
+
+// Close mobile nav on link click
+document.querySelectorAll('.nav-links a').forEach(a=>{a.addEventListener('click',()=>{document.querySelector('.nav-links').classList.remove('open')})});
+</script>
+</body>
+</html>
