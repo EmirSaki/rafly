@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, Tar
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../main.dart';
 import '../services/api_service.dart';
 import 'add_book_page.dart';
@@ -42,6 +43,18 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _logoUrl = widget.schoolLogoUrl;
+  }
+
+  Future<void> _openWhatsApp() async {
+    final uri = Uri.parse(
+      'https://wa.me/905350127504?text=${Uri.encodeComponent('Merhaba, Rafly hakkında bilgi almak istiyorum.')}',
+    );
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('WhatsApp açılamadı')),
+      );
+    }
   }
 
   Future<void> _confirmLogout() async {
@@ -253,6 +266,16 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       backgroundColor: kBackground,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _openWhatsApp,
+        backgroundColor: const Color(0xFF25D366),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.chat_rounded, size: 20),
+        label: const Text(
+          'Bize Ulaşın',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),

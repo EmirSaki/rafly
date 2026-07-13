@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/student_auth_provider.dart';
 import 'pages/school_login_page.dart';
 import 'pages/home_page.dart';
-import 'services/api_service.dart';
 import 'services/notification_service.dart';
 import 'student/student_login_page.dart';
 import 'student/student_main_shell.dart';

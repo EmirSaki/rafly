@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/book.dart';
 import '../services/api_service.dart';
+import '../widgets/category_multi_select.dart';
 import '../main.dart';
 
 class BookDetailPage extends StatefulWidget {
@@ -22,7 +23,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
   final TextEditingController quantityController = TextEditingController();
   final TextEditingController authorsController = TextEditingController();
   final TextEditingController publisherController = TextEditingController();
-  final TextEditingController categoriesController = TextEditingController();
+  List<String> selectedCategories = [];
   final TextEditingController pageCountController = TextEditingController();
 
   bool isLoading = true;
@@ -40,7 +41,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
     quantityController.text = (b.quantity ?? 0).toString();
     authorsController.text = b.authors.join(", ");
     publisherController.text = b.publisher;
-    categoriesController.text = b.categories.join(", ");
+    selectedCategories = List<String>.from(b.categories);
     pageCountController.text = b.pageCount > 0 ? b.pageCount.toString() : "";
   }
 
@@ -99,11 +100,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
         .where((e) => e.isNotEmpty)
         .toList();
 
-    final categories = categoriesController.text
-        .split(",")
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
+    final categories = List<String>.from(selectedCategories);
 
     final pageCount = int.tryParse(pageCountController.text.trim()) ?? 0;
 
@@ -204,7 +201,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
     quantityController.dispose();
     authorsController.dispose();
     publisherController.dispose();
-    categoriesController.dispose();
     pageCountController.dispose();
     super.dispose();
   }
@@ -331,10 +327,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
                           label: "Yayınevi",
                           controller: publisherController,
                         ),
-                        _buildEditableField(
+                        CategoryMultiSelect(
                           label: "Kategori",
-                          controller: categoriesController,
-                          hint: "Virgülle ayırarak yazın",
+                          selected: selectedCategories,
+                          onChanged: (list) =>
+                              setState(() => selectedCategories = list),
                         ),
                         _buildEditableField(
                           label: "Sayfa Sayısı",

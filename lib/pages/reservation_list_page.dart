@@ -23,6 +23,8 @@ class _ReservationListPageState extends State<ReservationListPage> {
   String selectedStatus = "tümü";
   String selectedClass = "tümü";
   List<String> classList = [];
+  DateTime? filterStartDate;
+  DateTime? filterEndDate;
 
   List<Map<String, dynamic>> reservations = [];
 
@@ -61,7 +63,11 @@ class _ReservationListPageState extends State<ReservationListPage> {
         errorMessage = "";
       });
 
-      final result = await ApiService.getReservations(schoolCode: widget.schoolCode);
+      final result = await ApiService.getReservations(
+        schoolCode: widget.schoolCode,
+        startDate: filterStartDate == null ? null : formatDateForApi(filterStartDate!),
+        endDate: filterEndDate == null ? null : formatDateForApi(filterEndDate!),
+      );
       if (!mounted) return;
       setState(() => reservations = result);
     } catch (e) {
@@ -88,6 +94,43 @@ class _ReservationListPageState extends State<ReservationListPage> {
 
       return matchesStatus && matchesClass && matchesBookName;
     }).toList();
+  }
+
+  String formatDateForApi(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Future<void> pickFilterDate({required bool isStart}) async {
+    final initial = (isStart ? filterStartDate : filterEndDate) ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isStart) {
+        filterStartDate = picked;
+        if (filterEndDate != null && filterEndDate!.isBefore(filterStartDate!)) {
+          filterEndDate = filterStartDate;
+        }
+      } else {
+        filterEndDate = picked;
+        if (filterStartDate != null && filterStartDate!.isAfter(filterEndDate!)) {
+          filterStartDate = filterEndDate;
+        }
+      }
+    });
+    await loadReservations();
+  }
+
+  Future<void> clearFilterDates() async {
+    if (filterStartDate == null && filterEndDate == null) return;
+    setState(() {
+      filterStartDate = null;
+      filterEndDate = null;
+    });
+    await loadReservations();
   }
 
   String formatDate(dynamic value) {
@@ -300,6 +343,36 @@ class _ReservationListPageState extends State<ReservationListPage> {
               if (value == null) return;
               setState(() => selectedClass = value);
             },
+          ),
+          const SizedBox(height: 10),
+          const Text("Tarih Aralığı", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary)),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: isLoading ? null : () => pickFilterDate(isStart: true),
+                  icon: const Icon(Icons.calendar_today, size: 16),
+                  label: Text(filterStartDate == null ? "Başlangıç" : formatDate(formatDateForApi(filterStartDate!))),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: isLoading ? null : () => pickFilterDate(isStart: false),
+                  icon: const Icon(Icons.calendar_today, size: 16),
+                  label: Text(filterEndDate == null ? "Bitiş" : formatDate(formatDateForApi(filterEndDate!))),
+                ),
+              ),
+              if (filterStartDate != null || filterEndDate != null) ...[
+                const SizedBox(width: 4),
+                IconButton(
+                  onPressed: isLoading ? null : clearFilterDates,
+                  icon: const Icon(Icons.clear, color: kTextSecondary),
+                  tooltip: "Tarihi temizle",
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 10),
           TextField(

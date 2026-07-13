@@ -61,6 +61,64 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     }
   }
 
+  Future<void> _deleteAccount() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hesabımı Sil'),
+        content: const Text(
+          'Hesabın ve tüm kişisel verilerin (profil, ödünç geçmişi) kalıcı olarak silinecek. '
+          'Bu işlem geri alınamaz.\n\nDevam etmek istiyor musun?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: kDestructive),
+            child: const Text('Hesabımı Sil'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _loading = true);
+    try {
+      final res = await ApiService.deleteStudentAccount();
+      if (!mounted) return;
+      if (res['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hesabın silindi'),
+            backgroundColor: kSuccess,
+          ),
+        );
+        await context.read<StudentAuthProvider>().logout();
+      } else {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['message'] ?? 'Hesap silinemedi'),
+            backgroundColor: kDestructive,
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bağlantı hatası'),
+          backgroundColor: kDestructive,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<StudentAuthProvider>();
@@ -172,6 +230,17 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 side: const BorderSide(color: kDestructive, width: 1),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: TextButton.icon(
+              onPressed: _loading ? null : _deleteAccount,
+              icon: const Icon(Icons.delete_forever_rounded, size: 18),
+              label: const Text('Hesabımı Sil'),
+              style: TextButton.styleFrom(foregroundColor: kDestructive),
             ),
           ),
           const SizedBox(height: 40),

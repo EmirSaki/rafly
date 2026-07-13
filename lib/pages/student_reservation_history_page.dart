@@ -20,7 +20,6 @@ class StudentReservationHistoryPage extends StatefulWidget {
 class _StudentReservationHistoryPageState
     extends State<StudentReservationHistoryPage> {
   bool isLoading = true;
-  bool isDeleting = false;
   String errorMessage = "";
   List<Map<String, dynamic>> reservations = [];
 
@@ -99,58 +98,6 @@ class _StudentReservationHistoryPageState
       case "loaned": return "Ödünçte";
       case "returned": return "İade Edildi";
       default: return status.isEmpty ? "-" : status;
-    }
-  }
-
-  Future<void> _confirmAndDeleteStudent() async {
-    final fullName = widget.student["full_name"]?.toString() ?? "Bu öğrenci";
-    final confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Öğrenci Sil"),
-        content: Text("\"$fullName\" adlı öğrenciyi silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text("Vazgeç"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: kDestructive),
-            child: const Text("Sil"),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-
-    final studentNumber = widget.student["student_number"]?.toString().trim() ?? "";
-    final schoolLevel = widget.student["school_level"]?.toString().trim() ?? "";
-
-    setState(() => isDeleting = true);
-    try {
-      await ApiService.deleteStudent(
-        schoolCode: widget.schoolCode,
-        studentNumber: studentNumber,
-        schoolLevel: schoolLevel,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Öğrenci silindi"), backgroundColor: kSuccess),
-      );
-      Navigator.of(context).pop(true);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Hata: ${e.toString().replaceFirst('Exception: ', '')}"),
-          backgroundColor: kDestructive,
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => isDeleting = false);
     }
   }
 

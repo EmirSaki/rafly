@@ -135,7 +135,7 @@ class _BookListPageState extends State<BookListPage> {
 
   Future<void> exportBooks(String format) async {
     try {
-      final path = await ApiService.exportBooks(
+      await ApiService.exportBooks(
         schoolCode: widget.schoolCode,
         format: format,
       );

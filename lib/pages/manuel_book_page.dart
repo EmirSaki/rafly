@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
+import '../widgets/category_multi_select.dart';
 import '../main.dart';
 
 class ManualBookPage extends StatefulWidget {
@@ -20,7 +21,7 @@ class _ManualBookPageState extends State<ManualBookPage> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController authorsController = TextEditingController();
   final TextEditingController publisherController = TextEditingController();
-  final TextEditingController categoriesController = TextEditingController();
+  List<String> selectedCategories = [];
   final TextEditingController volumeCountController =
       TextEditingController(text: "0");
   final TextEditingController quantityController =
@@ -61,8 +62,8 @@ class _ManualBookPageState extends State<ManualBookPage> {
       authorsController.text =
           ApiService.normalizeStringList(data["authors"]).join(", ");
       publisherController.text = (data["publisher"]?.toString() ?? "");
-      categoriesController.text =
-          ApiService.normalizeStringList(data["categories"]).join(", ");
+      selectedCategories =
+          ApiService.normalizeStringList(data["categories"]).toList();
       pageCountController.text = '${data["pageCount"] ?? 0}';
       volumeCountController.text = '${data["volumeCount"] ?? 0}';
       quantityController.text = "1";
@@ -81,7 +82,7 @@ class _ManualBookPageState extends State<ManualBookPage> {
         titleController.clear();
         authorsController.clear();
         publisherController.clear();
-        categoriesController.clear();
+        selectedCategories = [];
         pageCountController.clear();
         volumeCountController.text = "0";
         quantityController.text = "1";
@@ -98,8 +99,7 @@ class _ManualBookPageState extends State<ManualBookPage> {
     final authors =
         ApiService.normalizeStringList(authorsController.text).toList();
     final publisher = publisherController.text.trim();
-    final categories =
-        ApiService.normalizeStringList(categoriesController.text).toList();
+    final categories = List<String>.from(selectedCategories);
     final volumeCount =
         int.tryParse(volumeCountController.text.trim()) ?? 0;
     final quantity = int.tryParse(quantityController.text.trim()) ?? 1;
@@ -250,7 +250,6 @@ class _ManualBookPageState extends State<ManualBookPage> {
     titleController.dispose();
     authorsController.dispose();
     publisherController.dispose();
-    categoriesController.dispose();
     volumeCountController.dispose();
     quantityController.dispose();
     pageCountController.dispose();
@@ -376,10 +375,11 @@ class _ManualBookPageState extends State<ManualBookPage> {
                           controller: publisherController,
                           textCapitalization: TextCapitalization.words,
                         ),
-                        _buildFormField(
-                          label: "Kategoriler (virgülle ayır)",
-                          controller: categoriesController,
-                          textCapitalization: TextCapitalization.words,
+                        CategoryMultiSelect(
+                          label: "Kategoriler",
+                          selected: selectedCategories,
+                          onChanged: (list) =>
+                              setState(() => selectedCategories = list),
                         ),
                         _buildFormField(
                           label: "Sayfa Sayısı",

@@ -480,6 +480,8 @@ class ApiService {
     required String schoolCode,
     String? status,
     String? studentNumber,
+    String? startDate,
+    String? endDate,
   }) async {
     final params = <String>["schoolCode=$schoolCode"];
 
@@ -489,6 +491,14 @@ class ApiService {
 
     if (studentNumber != null && studentNumber.trim().isNotEmpty) {
       params.add("studentNumber=${Uri.encodeComponent(studentNumber.trim())}");
+    }
+
+    if (startDate != null && startDate.trim().isNotEmpty) {
+      params.add("startDate=${Uri.encodeComponent(startDate.trim())}");
+    }
+
+    if (endDate != null && endDate.trim().isNotEmpty) {
+      params.add("endDate=${Uri.encodeComponent(endDate.trim())}");
     }
 
     final url = Uri.parse("$baseUrl/api/reservations?${params.join('&')}");
@@ -695,6 +705,15 @@ class ApiService {
       url,
       headers: await _studentHeaders(auth: true),
       body: jsonEncode(body),
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> deleteStudentAccount() async {
+    final url = Uri.parse('$baseUrl/api/students/profile');
+    final response = await http.delete(
+      url,
+      headers: await _studentHeaders(auth: true),
     );
     return jsonDecode(response.body);
   }
