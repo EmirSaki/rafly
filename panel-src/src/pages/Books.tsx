@@ -17,7 +17,7 @@ import {
   deleteSchoolBook,
   type UpdateSchoolBookPayload,
 } from "@/api/books";
-import { getErrorMessage } from "@/api/client";
+import { getErrorMessage, getErrorStatus } from "@/api/client";
 import { normalizeIsbn, exportToCsv } from "@/lib/utils";
 import type { SchoolBook, IsbnLookupResult } from "@/types";
 
@@ -439,7 +439,13 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
       }
       setResult(data);
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      // Backend kitap bulunamayinca 404 firlatiyor -> elle ekleme formunu ac
+      if (getErrorStatus(err) === 404) {
+        setQuantity(1);
+        setNotFound(true);
+      } else {
+        toast.error(getErrorMessage(err));
+      }
     } finally {
       setSearching(false);
     }

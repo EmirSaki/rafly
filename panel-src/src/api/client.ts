@@ -35,6 +35,12 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Axios hatasının HTTP durum kodunu döndür (yoksa undefined)
+export function getErrorStatus(error: unknown): number | undefined {
+  if (axios.isAxiosError(error)) return error.response?.status;
+  return undefined;
+}
+
 // Backend tarafından dönen mesaj string'ini çıkar
 export function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
