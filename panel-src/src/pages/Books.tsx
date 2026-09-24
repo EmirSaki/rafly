@@ -1,6 +1,6 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, Suspense, lazy, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, ScanLine, Trash2, Pencil, Download, BookOpen } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, Download, BookOpen, Camera } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -20,6 +20,11 @@ import {
 import { getErrorMessage } from "@/api/client";
 import { normalizeIsbn, exportToCsv } from "@/lib/utils";
 import type { SchoolBook, IsbnLookupResult } from "@/types";
+
+// ZXing kutuphanesi buyuk; sadece tarama acilinca yuklensin diye tembel yukleniyor.
+const BarcodeScanner = lazy(() =>
+  import("@/components/BarcodeScanner").then((m) => ({ default: m.BarcodeScanner }))
+);
 
 export function BooksPage() {
   const school = useAuthStore((s) => s.school);
@@ -396,10 +401,10 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
   const [searching, setSearching] = useState(false);
   const [result, setResult] = useState<IsbnLookupResult | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [scanOpen, setScanOpen] = useState(false);
 
-  async function handleSearch(e: FormEvent) {
-    e.preventDefault();
-    const normalized = normalizeIsbn(isbn);
+  async function lookup(rawIsbn: string) {
+    const normalized = normalizeIsbn(rawIsbn);
     if (!normalized) {
       toast.error("Geçerli bir ISBN girin");
       return;
@@ -417,6 +422,11 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
     } finally {
       setSearching(false);
     }
+  }
+
+  function handleSearch(e: FormEvent) {
+    e.preventDefault();
+    lookup(isbn);
   }
 
   const addMutation = useMutation({
@@ -446,6 +456,7 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
     setIsbn("");
     setResult(null);
     setQuantity(1);
+    setScanOpen(false);
     onClose();
   }
 
@@ -457,18 +468,43 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
       description="ISBN ile arayıp envantere ekleyin"
       size="lg"
     >
-      <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+      <form onSubmit={handleSearch} className="flex flex-wrap gap-2 mb-4">
         <Input
           placeholder="ISBN gir veya tara..."
           value={isbn}
           onChange={(e) => setIsbn(e.target.value)}
+          className="min-w-[160px] flex-1"
           autoFocus
         />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setScanOpen(true)}
+          title="Kamera ile barkod tara"
+        >
+          <Camera size={16} />
+          Tara
+        </Button>
         <Button type="submit" loading={searching}>
-          <ScanLine size={16} />
+          <Search size={16} />
           Ara
         </Button>
       </form>
+
+      {scanOpen && (
+        <Suspense fallback={null}>
+          <BarcodeScanner
+            open
+            onClose={() => setScanOpen(false)}
+            onDetected={(code) => {
+              setIsbn(code);
+              setScanOpen(false);
+              lookup(code);
+            }}
+            title="Kitap barkodunu tara"
+          />
+        </Suspense>
+      )}
 
       {result && (
         <div className="card p-4 space-y-3">

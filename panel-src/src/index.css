@@ -64,3 +64,23 @@
     @apply inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors;
   }
 }
+
+/* ==== Mobil / iOS uyumluluğu ==== */
+
+/* iOS Safari, font boyutu 16px'ten kucuk bir alana dokununca sayfayi
+   otomatik olarak yakinlastirir; bu da duzenin kaymasina/tasmasina yol acar.
+   Kucuk ekranlarda tum form alanlarini 16px yaparak bunu engelliyoruz. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Yatay tasmayi guvence altina al (iOS'ta body overflow-x tek basina yetmez) */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}

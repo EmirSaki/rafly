@@ -12,6 +12,7 @@ import {
   Camera,
   Trash2,
   Award,
+  X,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/authStore";
@@ -29,7 +30,12 @@ const navItems = [
   { to: "/announcements", label: "Bilgilendirme", icon: Megaphone },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const { user, school, logout } = useAuthStore();
   const { logoUrl, loading, fetchLogo, uploadLogo, removeLogo } = useLogoStore();
   const navigate = useNavigate();
@@ -81,8 +87,36 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="w-60 bg-white border-r flex flex-col h-full">
+    <>
+      {/* Mobil karartma katmani */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={cn(
+          "w-60 bg-white border-r flex flex-col shrink-0 z-50",
+          // Mobil: soldan kayan cekmece. Masaustu (md+): sabit ve her zaman gorunur.
+          "fixed inset-y-0 left-0 h-full transform transition-transform duration-200 ease-in-out",
+          "md:static md:h-full md:translate-x-0 md:transition-none",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
       <div className="p-6 border-b">
+        {/* Mobil kapatma butonu */}
+        <div className="flex justify-end md:hidden -mt-2 -mr-2 mb-1">
+          <button
+            onClick={onClose}
+            aria-label="Menuyu kapat"
+            className="p-1.5 rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
         <div className="flex items-center gap-2.5">
           {logoUrl ? (
             <img
@@ -158,6 +192,7 @@ export function Sidebar() {
             key={item.to}
             to={item.to}
             end={item.end}
+            onClick={onClose}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
@@ -191,6 +226,7 @@ export function Sidebar() {
           Çıkış Yap
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

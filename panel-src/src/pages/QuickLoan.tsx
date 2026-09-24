@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, lazy, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Zap, ScanLine } from "lucide-react";
 import toast from "react-hot-toast";
@@ -11,6 +11,11 @@ import { loanBookByStudent } from "@/api/reservations";
 import { getErrorMessage } from "@/api/client";
 import { normalizeIsbn } from "@/lib/utils";
 
+// ZXing kutuphanesi buyuk; sadece tarama acilinca yuklensin diye tembel yukleniyor.
+const BarcodeScanner = lazy(() =>
+  import("@/components/BarcodeScanner").then((m) => ({ default: m.BarcodeScanner }))
+);
+
 export function QuickLoanPage() {
   const school = useAuthStore((s) => s.school);
   const schoolCode = school?.school_code || "";
@@ -19,6 +24,7 @@ export function QuickLoanPage() {
   const [isbn, setIsbn] = useState("");
   const [schoolLevel, setSchoolLevel] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -89,11 +95,17 @@ export function QuickLoanPage() {
               placeholder="ISBN gir veya barkod tara..."
               value={isbn}
               onChange={(e) => setIsbn(e.target.value)}
+              className="pr-12"
             />
-            <ScanLine
-              size={16}
-              className="absolute right-3 top-[34px] text-muted-foreground pointer-events-none"
-            />
+            <button
+              type="button"
+              onClick={() => setScanOpen(true)}
+              title="Kamera ile barkod tara"
+              aria-label="Kamera ile barkod tara"
+              className="absolute right-1.5 top-[26px] flex items-center justify-center rounded-md p-2 text-primary hover:bg-primary/10 transition-colors"
+            >
+              <ScanLine size={20} />
+            </button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -138,6 +150,20 @@ export function QuickLoanPage() {
           </p>
         </div>
       </div>
+
+      {scanOpen && (
+        <Suspense fallback={null}>
+          <BarcodeScanner
+            open
+            onClose={() => setScanOpen(false)}
+            onDetected={(code) => {
+              setIsbn(code);
+              setScanOpen(false);
+            }}
+            title="Kitap barkodunu tara"
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
