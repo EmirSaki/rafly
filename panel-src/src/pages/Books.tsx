@@ -1,6 +1,6 @@
 import { FormEvent, Suspense, lazy, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Trash2, Pencil, Download, BookOpen, Camera } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, Download, BookOpen, Camera, Info } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -403,6 +403,23 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
   const [quantity, setQuantity] = useState(1);
   const [scanOpen, setScanOpen] = useState(false);
 
+  // Otomatik kayit bulunamadiginda elle giris formu
+  const [notFound, setNotFound] = useState(false);
+  const [mTitle, setMTitle] = useState("");
+  const [mAuthors, setMAuthors] = useState("");
+  const [mPublisher, setMPublisher] = useState("");
+  const [mCategories, setMCategories] = useState("");
+  const [mPageCount, setMPageCount] = useState(0);
+
+  function resetManual() {
+    setNotFound(false);
+    setMTitle("");
+    setMAuthors("");
+    setMPublisher("");
+    setMCategories("");
+    setMPageCount(0);
+  }
+
   async function lookup(rawIsbn: string) {
     const normalized = normalizeIsbn(rawIsbn);
     if (!normalized) {
@@ -410,10 +427,14 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
       return;
     }
     setSearching(true);
+    setResult(null);
+    resetManual();
     try {
       const data = await getBookByIsbn(normalized);
       if (!data) {
-        toast.error("Kitap bulunamadı");
+        // Bulunamadi -> elle ekleme formunu ac (mobildeki gibi)
+        setQuantity(1);
+        setNotFound(true);
         return;
       }
       setResult(data);
@@ -452,11 +473,43 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
+  const manualAddMutation = useMutation({
+    mutationFn: () => {
+      const normalized = normalizeIsbn(isbn);
+      if (!normalized) throw new Error("Geçerli bir ISBN girin");
+      if (!mTitle.trim()) throw new Error("Kitap adı zorunlu");
+      return addBookToSchool({
+        schoolCode,
+        isbn: normalized,
+        title: mTitle.trim(),
+        authors: mAuthors
+          .split(",")
+          .map((a) => a.trim())
+          .filter(Boolean),
+        publisher: mPublisher.trim() || undefined,
+        categories: mCategories
+          .split(",")
+          .map((c) => c.trim())
+          .filter(Boolean),
+        pageCount: mPageCount || 0,
+        volumeCount: 0,
+        quantity,
+      });
+    },
+    onSuccess: () => {
+      toast.success("Kitap envantere eklendi");
+      onAdded();
+      handleClose();
+    },
+    onError: (err) => toast.error(getErrorMessage(err)),
+  });
+
   function handleClose() {
     setIsbn("");
     setResult(null);
     setQuantity(1);
     setScanOpen(false);
+    resetManual();
     onClose();
   }
 
@@ -548,6 +601,81 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
             <Button
               onClick={() => addMutation.mutate()}
               loading={addMutation.isPending}
+            >
+              <Plus size={16} />
+              Envantere Ekle
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {notFound && !result && (
+        <div className="card p-4 space-y-3">
+          <div className="flex items-start gap-2 rounded-md border border-amber-100 bg-amber-50 p-3">
+            <Info size={16} className="mt-0.5 shrink-0 text-amber-600" />
+            <p className="text-xs text-amber-900">
+              Bu ISBN için otomatik kayıt bulunamadı. Kitap bilgilerini elle
+              girip kütüphaneye ekleyebilirsiniz.
+            </p>
+          </div>
+
+          <div>
+            <p className="mb-1 text-xs text-muted-foreground">ISBN</p>
+            <p className="rounded bg-muted/50 px-2 py-1.5 font-mono text-sm">
+              {normalizeIsbn(isbn) || isbn}
+            </p>
+          </div>
+
+          <Input
+            label="Kitap Adı *"
+            placeholder="Kitabın adı"
+            value={mTitle}
+            onChange={(e) => setMTitle(e.target.value)}
+            autoFocus
+          />
+          <Input
+            label="Yazar(lar)"
+            placeholder="Virgülle ayırarak yazın"
+            value={mAuthors}
+            onChange={(e) => setMAuthors(e.target.value)}
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input
+              label="Yayınevi"
+              value={mPublisher}
+              onChange={(e) => setMPublisher(e.target.value)}
+            />
+            <Input
+              label="Tür"
+              placeholder="Virgülle ayırarak yazın"
+              value={mCategories}
+              onChange={(e) => setMCategories(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input
+              label="Sayfa Sayısı"
+              type="number"
+              min={0}
+              value={mPageCount}
+              onChange={(e) => setMPageCount(Number(e.target.value))}
+            />
+            <Input
+              label="Adet"
+              type="number"
+              min={1}
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={handleClose}>
+              İptal
+            </Button>
+            <Button
+              onClick={() => manualAddMutation.mutate()}
+              loading={manualAddMutation.isPending}
             >
               <Plus size={16} />
               Envantere Ekle
