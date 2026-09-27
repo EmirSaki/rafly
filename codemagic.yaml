@@ -1,0 +1,50 @@
+# Rafly - iOS App Store build (Mac gerekmez, Codemagic bulut Mac'inde calisir)
+# Kurulum: README-CODEMAGIC.md dosyasina bak.
+
+workflows:
+  ios-release:
+    name: Rafly iOS Release
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+
+    integrations:
+      # ASAGIDAKI ADI, Codemagic panelinde olusturdugun App Store Connect API
+      # anahtarinin adiyla BIREBIR AYNI yap. (Ornek: RaflyAppStoreKey)
+      app_store_connect: RaflyAppStoreKey
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.rafly.app
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Kod imzalama profillerini ayarla
+        script: |
+          xcode-project use-profiles
+
+      - name: Flutter paketlerini al
+        script: |
+          flutter pub get
+
+      - name: CocoaPods kur
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+
+      - name: iOS IPA build
+        script: |
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        # IPA'yi otomatik TestFlight'a yukler. Once burada test edersin,
+        # sonra App Store Connect web arayuzunden incelemeye gonderirsin.
+        submit_to_testflight: true
