@@ -9,6 +9,8 @@ class Book {
   final int? availableQuantity;
   final int pageCount;
   final int volumeCount;
+  final String? shelf;
+  final String? coverUrl;
 
   Book({
     this.bookId,
@@ -21,6 +23,8 @@ class Book {
     this.availableQuantity,
     this.pageCount = 0,
     this.volumeCount = 0,
+    this.shelf,
+    this.coverUrl,
   });
 
   static List<String> _toStringList(dynamic value) {
@@ -64,6 +68,13 @@ class Book {
       ) ?? 0,
       pageCount: int.tryParse('${json['pageCount'] ?? json['page_count'] ?? 0}') ?? 0,
       volumeCount: int.tryParse('${json['volumeCount'] ?? json['volume_count'] ?? 0}') ?? 0,
+      shelf: (json['shelf'] == null || json['shelf'].toString().trim().isEmpty)
+          ? null
+          : json['shelf'].toString().trim(),
+      coverUrl: (() {
+        final raw = (json['cover_url'] ?? json['coverUrl'] ?? '').toString().trim();
+        return raw.isEmpty ? null : raw;
+      })(),
     );
   }
 
@@ -79,6 +90,8 @@ class Book {
       'available_quantity': availableQuantity,
       'pageCount': pageCount,
       'volumeCount': volumeCount,
+      'shelf': shelf,
+      'cover_url': coverUrl,
     };
   }
 }

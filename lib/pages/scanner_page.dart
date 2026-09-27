@@ -26,6 +26,7 @@ class _ScannerPageState extends State<ScannerPage> {
   String statusMessage = "Barkodu okut";
   Map<String, dynamic>? bookData;
 
+  final TextEditingController shelfController = TextEditingController();
   final TextEditingController titleController = TextEditingController();
   final TextEditingController authorsController = TextEditingController();
   final TextEditingController publisherController = TextEditingController();
@@ -43,6 +44,7 @@ class _ScannerPageState extends State<ScannerPage> {
   void initState() {
     super.initState();
     startNotFoundTimer();
+
   }
 
   void startNotFoundTimer() {
@@ -188,6 +190,7 @@ class _ScannerPageState extends State<ScannerPage> {
           "quantity": quantity,
           "pageCount": pageCount,
           "physicalDescription": pageCount > 0 ? "$pageCount sayfa" : "",
+          "shelf": shelfController.text.trim(),
         },
         increaseQuantity: increaseQuantity,
       );
@@ -317,6 +320,7 @@ class _ScannerPageState extends State<ScannerPage> {
       pageCountController.clear();
       volumeController.text = "0";
       quantityController.text = "1";
+      shelfController.clear();
       statusMessage = "Barkodu okut";
     });
 
@@ -465,6 +469,11 @@ class _ScannerPageState extends State<ScannerPage> {
                       textCapitalization: TextCapitalization.characters,
                     ),
                     _buildFormField(
+                      label: "Raf (opsiyonel)",
+                      controller: shelfController,
+                      textCapitalization: TextCapitalization.characters,
+                    ),
+                    _buildFormField(
                       label: "Sayfa Sayısı",
                       controller: pageCountController,
                       keyboardType: TextInputType.number,
@@ -525,6 +534,7 @@ class _ScannerPageState extends State<ScannerPage> {
   @override
   void dispose() {
     notFoundTimer?.cancel();
+    shelfController.dispose();
     titleController.dispose();
     authorsController.dispose();
     publisherController.dispose();

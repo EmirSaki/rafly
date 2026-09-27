@@ -1,7 +1,9 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
 import '../main.dart';
 import 'full_screen_image_page.dart';
 
@@ -14,7 +16,15 @@ class NotificationService {
     if (_initialized) return;
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(android: androidSettings);
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
 
     await _plugin.initialize(
       initSettings,
@@ -26,6 +36,11 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
+
+    await _plugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   static void _onNotificationTapped(NotificationResponse response) {
@@ -70,21 +85,25 @@ class NotificationService {
   }) async {
     if (!_initialized) await init();
 
-    BigPictureStyleInformation? bigPicture;
+    Uint8List? imageBytes;
     if (imageBase64 != null && imageBase64.isNotEmpty) {
       try {
         String raw = imageBase64;
         if (raw.contains(',')) {
           raw = raw.split(',').last;
         }
-        final bytes = base64Decode(raw);
-        bigPicture = BigPictureStyleInformation(
-          ByteArrayAndroidBitmap(Uint8List.fromList(bytes)),
-          contentTitle: title,
-          summaryText: body,
-          largeIcon: ByteArrayAndroidBitmap(Uint8List.fromList(bytes)),
-        );
+        imageBytes = base64Decode(raw);
       } catch (_) {}
+    }
+
+    BigPictureStyleInformation? bigPicture;
+    if (imageBytes != null) {
+      bigPicture = BigPictureStyleInformation(
+        ByteArrayAndroidBitmap(imageBytes),
+        contentTitle: title,
+        summaryText: body,
+        largeIcon: ByteArrayAndroidBitmap(imageBytes),
+      );
     }
 
     final androidDetails = AndroidNotificationDetails(
@@ -101,7 +120,28 @@ class NotificationService {
           ),
     );
 
-    final details = NotificationDetails(android: androidDetails);
+    // iOS: gorseli gecici dosyaya yazip bildirime ek olarak baglariz.
+    List<DarwinNotificationAttachment>? iosAttachments;
+    if (imageBytes != null && Platform.isIOS) {
+      try {
+        final dir = await getTemporaryDirectory();
+        final file = File('${dir.path}/rafly_notif_$id.jpg');
+        await file.writeAsBytes(imageBytes);
+        iosAttachments = [DarwinNotificationAttachment(file.path)];
+      } catch (_) {}
+    }
+
+    final iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      attachments: iosAttachments,
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
 
     String? payloadStr;
     if (imageBase64 != null && imageBase64.isNotEmpty) {

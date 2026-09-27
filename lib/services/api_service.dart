@@ -145,6 +145,7 @@ class ApiService {
       "pageCount": int.tryParse('${data["pageCount"] ?? 0}') ?? 0,
       "volumeCount": int.tryParse('${data["volumeCount"] ?? 0}') ?? 0,
       "physicalDescription": (data["physicalDescription"] ?? "").toString(),
+      "coverUrl": (data["coverUrl"] ?? data["cover_url"] ?? "").toString(),
       "source": (data["source"] ?? "").toString(),
     };
   }
@@ -263,6 +264,7 @@ class ApiService {
       "available_quantity": int.tryParse(
         '${data["available_quantity"] ?? data["availableQuantity"] ?? 0}',
       ) ?? 0,
+      "coverUrl": (data["coverUrl"] ?? data["cover_url"] ?? "").toString(),
       "source": (data["source"] ?? "school_db").toString(),
     };
   }
@@ -294,6 +296,10 @@ class ApiService {
         })(),
         "physicalDescription":
         (bookData["physicalDescription"] ?? "").toString(),
+        "coverUrl": (bookData["coverUrl"] ?? "").toString(),
+        "shelf": (bookData["shelf"]?.toString().trim().isEmpty ?? true)
+            ? null
+            : bookData["shelf"].toString().trim(),
       }),
     );
 
@@ -373,6 +379,7 @@ class ApiService {
     String? publisher,
     List<String>? categories,
     int? pageCount,
+    String? shelf,
   }) async {
     final url = Uri.parse("$baseUrl/api/schools/$schoolCode/books/$bookId");
 
@@ -384,6 +391,7 @@ class ApiService {
     if (publisher != null) body["publisher"] = publisher;
     if (categories != null) body["categories"] = categories;
     if (pageCount != null) body["page_count"] = pageCount;
+    if (shelf != null) body["shelf"] = shelf;
 
     final response = await http.patch(
       url,
@@ -553,6 +561,46 @@ class ApiService {
     } catch (_) {}
 
     return null;
+  }
+
+  /// Bir ISBN'e elle kapak yükler.
+  ///
+  /// Kapak okula değil **kitabın ISBN'ine** bağlanır: aynı kitabı bulunduran
+  /// bütün okulların kütüphanelerinde aynı kapak görünür.
+  static Future<Map<String, dynamic>> uploadBookCover({
+    required String isbn,
+    required Uint8List imageBytes,
+    required String fileName,
+  }) async {
+    final normalized = normalizeIsbn(isbn);
+    final url = Uri.parse("$baseUrl/api/books/isbn/$normalized/cover");
+
+    final request = http.MultipartRequest("POST", url);
+    request.files.add(
+      http.MultipartFile.fromBytes("cover", imageBytes, filename: fileName),
+    );
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    return _validateSuccessResponse(response);
+  }
+
+  /// Kitabın elle yüklenmiş kapağını kaldırır (tüm okullarda).
+  static Future<Map<String, dynamic>> deleteBookCover({
+    required String isbn,
+  }) async {
+    final normalized = normalizeIsbn(isbn);
+    final url = Uri.parse("$baseUrl/api/books/isbn/$normalized/cover");
+
+    final response = await http.delete(url);
+    final decoded = _decodeJsonResponse(response);
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return decoded;
+    }
+
+    throw Exception(_extractErrorMessage(response, decoded));
   }
 
   static Future<Map<String, dynamic>> uploadSchoolLogo({

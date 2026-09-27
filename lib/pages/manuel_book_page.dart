@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
-import '../widgets/category_multi_select.dart';
 import '../main.dart';
 
 class ManualBookPage extends StatefulWidget {
@@ -21,12 +20,14 @@ class _ManualBookPageState extends State<ManualBookPage> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController authorsController = TextEditingController();
   final TextEditingController publisherController = TextEditingController();
-  List<String> selectedCategories = [];
+  final TextEditingController categoriesController = TextEditingController();
+  String coverUrl = "";
   final TextEditingController volumeCountController =
       TextEditingController(text: "0");
   final TextEditingController quantityController =
       TextEditingController(text: "1");
   final TextEditingController pageCountController = TextEditingController();
+  final TextEditingController shelfController = TextEditingController();
 
   bool isLoading = false;
   String statusMessage = "";
@@ -62,8 +63,9 @@ class _ManualBookPageState extends State<ManualBookPage> {
       authorsController.text =
           ApiService.normalizeStringList(data["authors"]).join(", ");
       publisherController.text = (data["publisher"]?.toString() ?? "");
-      selectedCategories =
-          ApiService.normalizeStringList(data["categories"]).toList();
+      categoriesController.text =
+          ApiService.normalizeStringList(data["categories"]).join(", ");
+      coverUrl = (data["coverUrl"] ?? "").toString();
       pageCountController.text = '${data["pageCount"] ?? 0}';
       volumeCountController.text = '${data["volumeCount"] ?? 0}';
       quantityController.text = "1";
@@ -82,7 +84,8 @@ class _ManualBookPageState extends State<ManualBookPage> {
         titleController.clear();
         authorsController.clear();
         publisherController.clear();
-        selectedCategories = [];
+        categoriesController.clear();
+        coverUrl = "";
         pageCountController.clear();
         volumeCountController.text = "0";
         quantityController.text = "1";
@@ -99,7 +102,8 @@ class _ManualBookPageState extends State<ManualBookPage> {
     final authors =
         ApiService.normalizeStringList(authorsController.text).toList();
     final publisher = publisherController.text.trim();
-    final categories = List<String>.from(selectedCategories);
+    final categories =
+        ApiService.normalizeStringList(categoriesController.text).toList();
     final volumeCount =
         int.tryParse(volumeCountController.text.trim()) ?? 0;
     final quantity = int.tryParse(quantityController.text.trim()) ?? 1;
@@ -138,7 +142,9 @@ class _ManualBookPageState extends State<ManualBookPage> {
           "volumeCount": volumeCount,
           "quantity": quantity,
           "pageCount": pageCount,
+          "coverUrl": coverUrl,
           "physicalDescription": pageCount > 0 ? "$pageCount sayfa" : "",
+          "shelf": shelfController.text.trim(),
         },
         increaseQuantity: increaseQuantity,
       );
@@ -250,9 +256,11 @@ class _ManualBookPageState extends State<ManualBookPage> {
     titleController.dispose();
     authorsController.dispose();
     publisherController.dispose();
+    categoriesController.dispose();
     volumeCountController.dispose();
     quantityController.dispose();
     pageCountController.dispose();
+    shelfController.dispose();
     super.dispose();
   }
 
@@ -360,6 +368,21 @@ class _ManualBookPageState extends State<ManualBookPage> {
                           ),
                         ),
                         const SizedBox(height: 14),
+                        if (coverUrl.trim().isNotEmpty) ...[
+                          Center(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                coverUrl,
+                                height: 160,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) =>
+                                    const SizedBox.shrink(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                        ],
                         _buildFormField(
                           label: "Kitap Adı",
                           controller: titleController,
@@ -375,11 +398,10 @@ class _ManualBookPageState extends State<ManualBookPage> {
                           controller: publisherController,
                           textCapitalization: TextCapitalization.words,
                         ),
-                        CategoryMultiSelect(
-                          label: "Kategoriler",
-                          selected: selectedCategories,
-                          onChanged: (list) =>
-                              setState(() => selectedCategories = list),
+                        _buildFormField(
+                          label: "Kategoriler (virgülle ayır)",
+                          controller: categoriesController,
+                          textCapitalization: TextCapitalization.words,
                         ),
                         _buildFormField(
                           label: "Sayfa Sayısı",
@@ -407,6 +429,11 @@ class _ManualBookPageState extends State<ManualBookPage> {
                             FilteringTextInputFormatter.digitsOnly
                           ],
                           textCapitalization: TextCapitalization.none,
+                        ),
+                        _buildFormField(
+                          label: "Raf (opsiyonel)",
+                          controller: shelfController,
+                          textCapitalization: TextCapitalization.characters,
                         ),
                         const SizedBox(height: 4),
                         SizedBox(

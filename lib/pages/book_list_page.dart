@@ -380,6 +380,50 @@ class _BookListPageState extends State<BookListPage> {
     );
   }
 
+  Widget _buildCoverThumb(Book book) {
+    final url = (book.coverUrl ?? "").trim();
+    const double w = 46, h = 62;
+
+    Widget placeholder() => Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(
+            color: kPrimary.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: kBorder),
+          ),
+          child: const Icon(Icons.menu_book_outlined,
+              size: 20, color: kTextSecondary),
+        );
+
+    if (url.isEmpty) return placeholder();
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: Image.network(
+        url,
+        width: w,
+        height: h,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder(),
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return SizedBox(
+            width: w,
+            height: h,
+            child: const Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildBookCard(Book book, String query) {
     final authorsText =
         book.authors.isNotEmpty ? book.authors.join(", ") : "Bilinmiyor";
@@ -422,6 +466,8 @@ class _BookListPageState extends State<BookListPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildCoverThumb(book),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
