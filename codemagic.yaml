@@ -13,16 +13,20 @@ workflows:
       app_store_connect: RaflyAppStoreKey
 
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.rafly.app
       flutter: stable
       xcode: latest
       cocoapods: default
+      vars:
+        BUNDLE_ID: "com.rafly.app"
 
     scripts:
-      - name: Kod imzalama profillerini ayarla
+      - name: Kod imzalama - sertifika ve profil olustur/getir
         script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
           xcode-project use-profiles
 
       - name: Flutter paketlerini al
