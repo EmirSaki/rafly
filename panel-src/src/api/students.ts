@@ -4,6 +4,7 @@ import type { ApiResponse, Student } from "@/types";
 export interface StudentsQuery {
   schoolCode: string;
   school_level?: string;
+  archived?: boolean;
 }
 
 export async function getStudents(params: StudentsQuery) {

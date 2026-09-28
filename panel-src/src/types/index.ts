@@ -39,6 +39,7 @@ export interface Student {
   phone?: string | null;
   password?: string | null;
   created_at?: string;
+  archived_at?: string | null;
 }
 
 export interface Book {

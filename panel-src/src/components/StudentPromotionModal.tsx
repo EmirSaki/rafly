@@ -6,7 +6,7 @@ import { Button } from './Button';
 
 type Preview = {
   token: string;
-  summary: { updated: number; added: number; removed: number; activeReservations: number };
+  summary: { updated: number; added: number; removed: number; merged?: number; activeReservations: number };
   removed: { student_id: number; student_number: string; full_name: string; class_name: string; reason: string }[];
   changes: { student_number: string; full_name: string; old_class: string; new_class: string }[];
 };
@@ -45,7 +45,7 @@ export function StudentPromotionModal({ schoolCode, onClose, onDone }: { schoolC
       }
       if (phase === 'commit') {
         await request('commit', reportToken);
-        toast.success('Sınıflar güncellendi; yeni öğrenciler eklendi ve listede olmayanlar silindi.');
+        toast.success("Sınıflar güncellendi; yeni öğrenciler eklendi ve listede olmayanlar Eski Öğrenciler'e taşındı.");
         onDone(); onClose();
       }
     } catch (error) {
@@ -57,7 +57,7 @@ export function StudentPromotionModal({ schoolCode, onClose, onDone }: { schoolC
     <div className="space-y-5">
       <div className="rounded-lg bg-blue-50 p-4 text-sm space-y-2">
         <p><strong>Kural:</strong> Ad + soyad + öğrenci numarası eşleşiyorsa yalnızca sınıf bilgileri güncellenir. Öğrenci hesabı, şifresi, üzerindeki kitaplar ve rezervasyon geçmişi korunur.</p>
-        <p>Yeni öğrenciler eklenir. Seçilen kapsamda olup yeni listede bulunmayan öğrenciler, eski 8. ve 12. sınıflar dahil, Excel yedeğinden ve onayınızdan sonra silinir.</p>
+        <p>Yeni öğrenciler eklenir. Seçilen kapsamda olup yeni listede bulunmayan öğrenciler, eski 8. ve 12. sınıflar dahil, Excel yedeğinden ve onayınızdan sonra <strong>Eski Öğrenciler</strong> kategorisine taşınır — silinmez. Hesapları, şifreleri ve kitap/rezervasyon geçmişleri korunur; listeyi tekrar yüklerseniz geri aktifleşirler.</p>
       </div>
       <label className="block text-sm font-medium">İşlem kapsamı
         <select className="mt-2 w-full border rounded-md p-2" value={scope} disabled={!!busy} onChange={e => { setScope(e.target.value); reset(); }}>
@@ -69,7 +69,7 @@ export function StudentPromotionModal({ schoolCode, onClose, onDone }: { schoolC
           <option value="hazırlık">Yalnızca hazırlık</option>
         </select>
       </label>
-      <p className="text-sm text-red-700">Seçtiğiniz kapsamın yeni döneme ait TÜM sınıf dosyalarını birlikte yükleyin. Eksik sınıf dosyası, o sınıftaki öğrencilerin silme listesine girmesine neden olur. Kademe geçişleri için okulun tamamını seçin.</p>
+      <p className="text-sm text-red-700">Seçtiğiniz kapsamın yeni döneme ait TÜM sınıf dosyalarını birlikte yükleyin. Eksik sınıf dosyası, o sınıftaki öğrencilerin Eski Öğrenciler'e taşınmasına neden olur. Kademe geçişleri için okulun tamamını seçin.</p>
       <label className="block text-sm font-medium">Excel dosyaları (.xls / .xlsx)
         <input type="file" multiple accept=".xls,.xlsx" disabled={!!busy} className="block mt-2 w-full text-sm" onChange={e => { setFiles(Array.from(e.target.files || [])); reset(); }} />
       </label>
@@ -79,20 +79,21 @@ export function StudentPromotionModal({ schoolCode, onClose, onDone }: { schoolC
         <div className="flex flex-wrap gap-4 text-sm font-medium">
           <span>Korunacak / güncellenecek: {preview.summary.updated}</span>
           <span>Eklenecek: {preview.summary.added}</span>
-          <span className="text-red-700">Silinecek: {preview.summary.removed}</span>
+          <span className="text-amber-700">Eski Öğrenciler'e taşınacak: {preview.summary.removed}</span>
+          {!!preview.summary.merged && <span className="text-blue-700">Mükerrer birleşecek: {preview.summary.merged}</span>}
         </div>
         <details><summary className="cursor-pointer text-sm font-medium">Sınıf değişikliklerini incele</summary>
           <div className="max-h-48 overflow-auto mt-2 text-sm">{preview.changes.map((s, i) => <p key={i}>{s.student_number} · {s.full_name} · {s.old_class} → {s.new_class}</p>)}</div>
         </details>
-        <details open={preview.summary.removed > 0}><summary className="cursor-pointer text-sm font-medium text-red-700">Silinecek öğrencileri incele</summary>
+        <details open={preview.summary.removed > 0}><summary className="cursor-pointer text-sm font-medium text-amber-700">Eski Öğrenciler'e taşınacakları incele</summary>
           <div className="max-h-48 overflow-auto mt-2 text-sm">{preview.removed.map(s => <p key={s.student_id}>{s.student_number} · {s.full_name} · {s.class_name} · {s.reason}</p>)}</div>
         </details>
-        {preview.summary.activeReservations > 0 && <p role="alert" className="text-sm text-red-700">Silinecek öğrencilerde aktif ödünç veya rezervasyon var. Önce bu işlemleri tamamlayın, sonra listeyi tekrar kontrol edin. Şu anda onay verilemez; Excel listesini indirebilirsiniz.</p>}
-        <Button variant="outline" disabled={!!busy} loading={busy === 'report'} onClick={() => run('report')}>1. Silinecek Öğrencileri Excel İndir</Button>
-        <label className="flex gap-2 text-sm items-start"><input type="checkbox" checked={confirmed} disabled={!reportToken || !!busy} onChange={e => setConfirmed(e.target.checked)} /><span>Excel yedeğini kaydettim. Yüklediğim dosyalar seçtiğim kapsamın tamamını içeriyor. Yukarıdaki silme listesini ve sınıf değişikliklerini onaylıyorum.</span></label>
+        {preview.summary.activeReservations > 0 && <p className="text-sm text-amber-700">Taşınacak öğrencilerde iade edilmemiş kitap/rezervasyon var. Silinmedikleri için geçmişleri korunur; kitaplar "Eski Öğrenci" üzerinde görünmeye devam eder ve sonradan iade edilebilir.</p>}
+        <Button variant="outline" disabled={!!busy} loading={busy === 'report'} onClick={() => run('report')}>1. Taşınacak Listeyi Excel İndir</Button>
+        <label className="flex gap-2 text-sm items-start"><input type="checkbox" checked={confirmed} disabled={!reportToken || !!busy} onChange={e => setConfirmed(e.target.checked)} /><span>Excel yedeğini kaydettim. Yüklediğim dosyalar seçtiğim kapsamın tamamını içeriyor. Yukarıdaki Eski Öğrenciler'e taşınacak listesini ve sınıf değişikliklerini onaylıyorum.</span></label>
         <div className="flex justify-end gap-2">
           <Button variant="outline" disabled={!!busy} onClick={onClose}>Vazgeç</Button>
-          <Button disabled={!reportToken || !confirmed || !!busy || preview.summary.activeReservations > 0} loading={busy === 'commit'} onClick={() => run('commit')}>2. Onayla ve Uygula</Button>
+          <Button disabled={!reportToken || !confirmed || !!busy} loading={busy === 'commit'} onClick={() => run('commit')}>2. Onayla ve Uygula</Button>
         </div>
       </div>}
     </div>

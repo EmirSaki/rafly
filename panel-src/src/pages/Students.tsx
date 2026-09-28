@@ -24,6 +24,8 @@ import { getErrorMessage } from "@/api/client";
 import { formatDate, exportToCsv } from "@/lib/utils";
 import type { Student, Reservation } from "@/types";
 
+const ARCHIVED_FILTER = "__archived__";
+
 const SCHOOL_LEVELS = [
   { value: "", label: "Tüm seviyeler" },
   { value: "ilkokul", label: "İlkokul" },
@@ -31,6 +33,7 @@ const SCHOOL_LEVELS = [
   { value: "lise", label: "Lise" },
   { value: "hazırlık", label: "Hazırlık" },
   { value: "diğer", label: "Diğer" },
+  { value: ARCHIVED_FILTER, label: "Eski Öğrenciler" },
 ];
 
 export function StudentsPage() {
@@ -46,12 +49,15 @@ export function StudentsPage() {
   const [promotionOpen, setPromotionOpen] = useState(false);
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
 
+  const showArchived = levelFilter === ARCHIVED_FILTER;
+
   const { data: students, isLoading } = useQuery({
     queryKey: ["students", schoolCode, levelFilter],
     queryFn: () =>
       getStudents({
         schoolCode,
-        school_level: levelFilter || undefined,
+        school_level: showArchived ? undefined : levelFilter || undefined,
+        archived: showArchived ? true : undefined,
       }),
     enabled: !!schoolCode,
   });
@@ -199,6 +205,8 @@ export function StudentsPage() {
       align: "right",
       render: (s) => {
         const overdue = overdueMap.has(s.student_number);
+        if (s.archived_at && !overdue)
+          return <Badge variant="default">Eski Öğrenci</Badge>;
         if (!overdue) return null;
         return (
           <button
@@ -287,7 +295,11 @@ export function StudentsPage() {
         columns={columns}
         data={filtered}
         loading={isLoading}
-        emptyText="Öğrenci kaydı yok. Excel yükle veya manuel ekle."
+        emptyText={
+          showArchived
+            ? "Eski öğrenci yok. Sınıf Atlatma'da listede olmayanlar buraya taşınır."
+            : "Öğrenci kaydı yok. Excel yükle veya manuel ekle."
+        }
         getRowKey={(s) => `${s.student_number}-${s.class_name}`}
         onRowClick={(s) => setDetailStudent(s)}
       />
