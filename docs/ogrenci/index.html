@@ -357,6 +357,7 @@ function renderLogin(){
         </div>
       </div>
       <button class="btn" id="btn-login"><span>Giriş Yap</span></button>
+      <button class="btn btn-outline" id="btn-firstlogin" style="margin-top:12px">İlk giriş · Şifreni e-postana al</button>
       <a href="../" style="display:block;text-align:center;margin-top:16px;font-size:13px;color:var(--text-secondary);text-decoration:none">← Ana sayfaya dön</a>
     </div>
   </div>`;
@@ -370,6 +371,109 @@ function renderLogin(){
   tp.addEventListener("click",()=>{ pass.type=pass.type==="password"?"text":"password"; tp.textContent=pass.type==="password"?"Göster":"Gizle"; });
   pass.addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
   $("#btn-login").addEventListener("click",doLogin);
+  $("#btn-firstlogin").addEventListener("click",()=>{
+    renderRequestPassword({
+      schoolCode: $("#in-school").value.trim(),
+      level: state.loginLevel,
+      number: $("#in-number").value.trim(),
+    });
+  });
+}
+
+// ══════════════════════════ ŞİFRE AL (İLK GİRİŞ) ══════════════════════════
+function renderRequestPassword(prefill){
+  prefill = prefill || {};
+  let selLevel = prefill.level || "ortaokul";
+  app.innerHTML = `
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <div class="ico">${I.school}</div>
+      <h1>Rafly</h1>
+      <p>Öğrenci Paneli</p>
+    </div>
+    <div class="auth-card">
+      <h2>Şifreni Al</h2>
+      <p class="sub">Numaran okulda kayıtlıysa şifreni e-postana göndeririz. Bu adres hesabına kaydedilir.</p>
+
+      <div class="mb14">
+        <label class="field-label">Okul Kodu</label>
+        <input class="input" id="rp-school" inputmode="numeric" maxlength="12" placeholder="Okul kodunu girin" value="${esc(prefill.schoolCode||'')}">
+      </div>
+      <div class="mb14">
+        <label class="field-label">Okul Seviyesi</label>
+        <div class="levels" id="rp-levels">
+          ${LEVELS.map(l=>`<button data-l="${l}" class="${l===selLevel?'active':''}">${LEVEL_LABELS[l]}</button>`).join("")}
+        </div>
+      </div>
+      <div class="mb14">
+        <label class="field-label">Öğrenci Numarası</label>
+        <input class="input" id="rp-number" inputmode="numeric" placeholder="1234" value="${esc(prefill.number||'')}">
+      </div>
+      <div class="mb16">
+        <label class="field-label">E-posta</label>
+        <input class="input" id="rp-email" type="email" placeholder="ornek@email.com">
+      </div>
+      <button class="btn" id="rp-send"><span>Şifremi Gönder</span></button>
+      <button class="btn btn-outline" id="rp-back" style="margin-top:12px">← Giriş ekranına dön</button>
+    </div>
+  </div>`;
+
+  $("#rp-levels").addEventListener("click",e=>{
+    const b=e.target.closest("button[data-l]"); if(!b)return;
+    selLevel=b.dataset.l;
+    $("#rp-levels").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));
+  });
+  $("#rp-back").addEventListener("click",()=>{ state.loginLevel=selLevel; renderLogin(); });
+  $("#rp-send").addEventListener("click",async()=>{
+    const schoolCode=$("#rp-school").value.trim();
+    const number=$("#rp-number").value.trim();
+    const email=$("#rp-email").value.trim();
+    if(!schoolCode||!number||!email){ toast("Okul kodu, numara ve e-posta zorunlu"); return; }
+    if(!email.includes("@")){ toast("Geçerli bir e-posta girin"); return; }
+    const btn=$("#rp-send"); const prev=btn.innerHTML; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+    try{
+      const r=await api("/api/students/request-password",{method:"POST",body:{
+        schoolCode, student_number:number, school_level:selLevel, email
+      }});
+      if(r.data && r.data.success===true){
+        renderRequestPasswordDone({schoolCode, number, level:selLevel, maskedEmail:r.data.email||email});
+      }else{
+        toast((r.data && r.data.message) || "Şifre gönderilemedi");
+        btn.disabled=false; btn.innerHTML=prev;
+      }
+    }catch(_){
+      toast("Bağlantı hatası"); btn.disabled=false; btn.innerHTML=prev;
+    }
+  });
+}
+
+function renderRequestPasswordDone(info){
+  app.innerHTML=`
+  <div class="auth-wrap">
+    <div style="text-align:center;margin-bottom:8px">
+      <div style="width:80px;height:80px;border-radius:20px;background:var(--success);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px">
+        <span style="width:40px;height:40px;color:#fff;display:inline-flex">${I.check}</span>
+      </div>
+      <h2 style="font-size:22px;font-weight:700">Şifren Gönderildi</h2>
+      <p style="font-size:14px;color:var(--text-secondary);margin-top:10px;line-height:1.6">
+        <b>${esc(info.maskedEmail)}</b> adresine giriş şifren gönderildi.<br>Gelen kutunu (ve spam klasörünü) kontrol et.
+      </p>
+    </div>
+    <div class="auth-card mt20">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.6">
+        E-postadaki şifreyle giriş yap. Giriş yaptıktan sonra Profil bölümünden şifreni değiştirebilirsin.
+      </p>
+      <button class="btn" id="done-login">Giriş Ekranına Git</button>
+    </div>
+  </div>`;
+  $("#done-login").addEventListener("click",()=>{
+    state.loginLevel=info.level;
+    renderLogin();
+    // numarayı ve okul kodunu doldur
+    const s=$("#in-school"); if(s) s.value=info.schoolCode;
+    const n=$("#in-number"); if(n) n.value=info.number;
+    const p=$("#in-pass"); if(p) p.focus();
+  });
 }
 
 async function doLogin(){
