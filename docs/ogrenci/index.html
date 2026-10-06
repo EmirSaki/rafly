@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1A3366">
+<title>Rafly · Öğrenci Paneli</title>
+<link rel="icon" href="../logo.png">
+<style>
+:root{
+  --primary:#1A3366;
+  --primary-light:#2A4A80;
+  --bg:#F9FAFB;
+  --surface:#FFFFFF;
+  --text:#111827;
+  --text-secondary:#6B7280;
+  --border:#E5E7EB;
+  --muted:#F3F4F6;
+  --success:#16A34A;
+  --warning:#F59E0B;
+  --destructive:#DC2626;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.5;
+}
+#app{min-height:100%;max-width:480px;margin:0 auto;background:var(--bg);position:relative;overflow:hidden}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+
+/* ── Inputs ── */
+.field-label{font-size:13px;font-weight:500;color:var(--text);margin-bottom:6px;display:block}
+.input{
+  width:100%;height:44px;padding:0 14px;border:1px solid var(--border);border-radius:8px;
+  background:var(--surface);font-size:14px;color:var(--text);outline:none;transition:border-color .15s;
+}
+.input:focus{border-color:var(--primary)}
+.input-wrap{position:relative}
+.input-wrap .toggle-pass{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-secondary);padding:6px;font-size:13px}
+
+/* ── Buttons ── */
+.btn{
+  width:100%;height:44px;border:none;border-radius:8px;background:var(--primary);color:#fff;
+  font-size:14px;font-weight:600;transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn:hover{background:var(--primary-light)}
+.btn:active{transform:scale(.99)}
+.btn:disabled{opacity:.6;cursor:default}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text-secondary)}
+.btn-outline:hover{background:var(--muted)}
+.btn-danger-outline{background:transparent;border:1px solid var(--destructive);color:var(--destructive)}
+.btn-danger-outline:hover{background:rgba(220,38,38,.06)}
+.btn-text{background:none;border:none;color:var(--destructive);font-weight:600;height:44px}
+
+.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+.spinner-primary{border-color:rgba(26,51,102,.2);border-top-color:var(--primary)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.center-loader{display:flex;justify-content:center;padding:40px}
+.center-loader .spinner{width:28px;height:28px}
+
+/* ── Card ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+
+/* ── Auth screens ── */
+.auth-wrap{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:24px}
+.auth-logo{text-align:center;margin-bottom:28px}
+.auth-logo .ico{width:56px;height:56px;border-radius:16px;background:var(--primary);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px}
+.auth-logo .ico svg{width:30px;height:30px;stroke:#fff}
+.auth-logo h1{font-size:26px;font-weight:800;color:var(--primary)}
+.auth-logo p{font-size:13px;color:var(--text-secondary);margin-top:2px}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.auth-card h2{font-size:20px;font-weight:600}
+.auth-card .sub{font-size:13px;color:var(--text-secondary);margin:2px 0 20px}
+
+/* level selector */
+.levels{display:flex;background:var(--muted);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.levels button{flex:1;padding:11px 2px;border:none;background:transparent;font-size:11px;font-weight:500;color:var(--text-secondary);border-radius:7px;transition:all .15s}
+.levels button.active{background:var(--primary);color:#fff;font-weight:700}
+
+.mb14{margin-bottom:14px}
+.mb16{margin-bottom:16px}
+.mt20{margin-top:20px}
+
+/* ── Shell / header ── */
+.app-header{
+  background:var(--surface);border-radius:0 0 24px 24px;padding:20px 24px;
+  box-shadow:0 4px 12px rgba(0,0,0,.04);display:flex;align-items:center;gap:14px;
+}
+.app-header .avatar{width:48px;height:48px;border-radius:14px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.app-header .avatar svg{width:26px;height:26px;stroke:#fff}
+.app-header .hi{font-size:18px;font-weight:700}
+.app-header .sub{font-size:12px;color:var(--text-secondary)}
+
+.scroll-area{padding-bottom:88px;overflow-y:auto}
+
+/* stats */
+.stats{display:flex;gap:12px;padding:20px 20px 0}
+.stat{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.stat svg{width:24px;height:24px;margin-bottom:8px}
+.stat .val{font-size:28px;font-weight:800;line-height:1}
+.stat .lbl{font-size:12px;color:var(--text-secondary);margin-top:4px}
+
+.section{padding:20px 20px 0}
+.section-title{font-size:15px;font-weight:600;margin-bottom:12px}
+
+/* active book */
+.active-book .row{display:flex;align-items:center;gap:8px}
+.active-book .cap{font-size:13px;font-weight:700;letter-spacing:.5px}
+.badge{padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700}
+.book-title{font-size:16px;font-weight:600;margin-top:14px}
+.book-writer{font-size:13px;color:var(--text-secondary);margin-top:4px}
+.meta{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);margin-top:10px}
+.meta svg{width:14px;height:14px}
+
+/* action tiles */
+.tile{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:10px;width:100%;text-align:left}
+.tile .ti{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tile .ti svg{width:20px;height:20px}
+.tile .tt{font-size:15px;font-weight:600}
+.tile .ts{font-size:13px;color:var(--text-secondary);margin-top:2px}
+.tile .chev{margin-left:auto;color:var(--text-secondary)}
+
+/* announcements */
+.ann{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+.ann.warn{background:rgba(220,38,38,.03);border-color:rgba(220,38,38,.3)}
+.ann .ah{display:flex;align-items:center;gap:6px}
+.ann .atitle{font-size:14px;font-weight:600;flex:1}
+.ann .acontent{font-size:13px;color:var(--text-secondary);margin-top:8px;white-space:pre-wrap}
+.ann .afoot{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-secondary);margin-top:10px}
+.ann .afoot svg{width:12px;height:12px}
+.ann-imgs{display:flex;gap:8px;overflow-x:auto;margin:8px 0}
+.ann-imgs img{height:140px;border-radius:8px;object-fit:cover;flex-shrink:0;cursor:pointer}
+.ann-imgs.single img{width:100%;height:auto;max-height:260px}
+
+/* books */
+.sub-header{background:var(--surface);padding:14px 16px 12px;position:sticky;top:0;z-index:5;border-bottom:1px solid var(--border)}
+.sub-header .sh-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.sub-header .back{background:none;border:none;color:var(--primary);display:flex;align-items:center;padding:4px}
+.sub-header .back svg{width:24px;height:24px}
+.sub-header .sh-title{font-size:17px;font-weight:700}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--text-secondary)}
+.search-wrap input{padding-left:38px}
+.list-info{display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary);padding:10px 16px 0}
+.book-row{display:flex;gap:14px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:8px}
+.book-cover{width:44px;height:58px;border-radius:8px;background:var(--muted);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.book-cover svg{width:22px;height:22px;stroke:var(--primary)}
+.book-info{flex:1;min-width:0}
+.book-info .t{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.book-info .a{font-size:12px;color:var(--text-secondary);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.book-info .p{font-size:11px;color:var(--text-secondary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.book-avail{text-align:center;flex-shrink:0}
+.book-avail .n{font-size:14px;font-weight:700;color:var(--primary)}
+.book-avail .l{font-size:10px;color:var(--text-secondary)}
+.pager{display:flex;justify-content:center;gap:12px;padding:4px 16px 20px}
+.pager button{padding:10px 20px;border:1px solid var(--border);background:var(--surface);border-radius:8px;font-size:13px;font-weight:600;color:var(--primary)}
+
+/* reservations */
+.rz{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:8px}
+.rz .top{display:flex;align-items:center;gap:12px}
+.rz .ic{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rz .ic svg{width:18px;height:18px}
+.rz .nm{font-size:14px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.rz .wr{font-size:12px;color:var(--text-secondary);margin-top:8px}
+.rz .dates{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11px;color:var(--text-secondary);margin-top:10px}
+.rz .dates span{display:inline-flex;align-items:center;gap:4px}
+.rz .dates svg{width:12px;height:12px}
+
+/* profile */
+.prof-head{text-align:center;padding:24px 20px 0}
+.prof-avatar{width:80px;height:80px;border-radius:20px;background:var(--primary);color:#fff;font-size:32px;font-weight:700;display:inline-flex;align-items:center;justify-content:center}
+.prof-name{font-size:20px;font-weight:700;margin-top:14px}
+.prof-sub{font-size:12px;color:var(--text-secondary);margin-top:4px}
+.info-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;margin-bottom:16px}
+.info-row{display:flex;justify-content:space-between;padding:8px 0;font-size:13px}
+.info-row .k{color:var(--text-secondary)}
+.info-row .v{font-weight:600}
+.caps{font-size:13px;font-weight:600;color:var(--text-secondary);letter-spacing:.5px;margin-bottom:10px}
+
+/* empty */
+.empty{text-align:center;color:var(--text-secondary);padding:50px 20px;font-size:14px}
+
+/* bottom nav */
+.bottom-nav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+  background:var(--surface);border-top:1px solid var(--border);box-shadow:0 -2px 8px rgba(0,0,0,.04);
+  display:flex;height:66px;z-index:20;
+}
+.bottom-nav button{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--text-secondary)}
+.bottom-nav button svg{width:24px;height:24px}
+.bottom-nav button.active{color:var(--primary)}
+.bottom-nav button.active span{font-weight:700}
+.bottom-nav span{font-size:10px}
+
+/* toast */
+#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);max-width:420px;width:calc(100% - 40px);
+  padding:12px 16px;border-radius:10px;color:#fff;font-size:13px;font-weight:500;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none;text-align:center}
+#toast.show{opacity:1}
+
+/* lightbox */
+#lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column}
+#lightbox img{max-width:94%;max-height:82%;object-fit:contain;border-radius:6px}
+#lightbox .lb-close{position:absolute;top:16px;right:16px;color:#fff;background:rgba(255,255,255,.15);border:none;width:40px;height:40px;border-radius:50%;font-size:22px}
+#lightbox .lb-nav{color:#fff;background:rgba(255,255,255,.15);border:none;width:44px;height:44px;border-radius:50%;font-size:26px;position:absolute;top:50%;transform:translateY(-50%)}
+#lightbox .lb-prev{left:12px}#lightbox .lb-next{right:12px}
+#lightbox .lb-count{color:#fff;font-size:13px;margin-top:16px}
+
+@media(min-width:481px){
+  body{padding:0}
+  #app{box-shadow:0 0 40px rgba(0,0,0,.06);min-height:100vh}
+}
+
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:80;display:flex;align-items:center;justify-content:center;padding:24px}
+.modal{background:var(--surface);border-radius:14px;padding:22px;max-width:340px;width:100%}
+.modal h3{font-size:17px;font-weight:700;margin-bottom:10px}
+.modal p{font-size:14px;color:var(--text-secondary);margin-bottom:20px}
+.modal .acts{display:flex;gap:10px}
+.modal .acts .btn{height:42px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const API = "https://library-api-346058361420.europe-west1.run.app";
+const LEVELS = ["ilkokul","ortaokul","lise","hazırlık","diğer"];
+const LEVEL_LABELS = {ilkokul:"İlkokul",ortaokul:"Ortaokul",lise:"Lise","hazırlık":"Hazırlık","diğer":"Diğer"};
+
+const state = {
+  token: localStorage.getItem("student_token") || null,
+  schoolCode: localStorage.getItem("student_school_code") || null,
+  schoolLevel: localStorage.getItem("student_school_level") || null,
+  user: null,
+  profileCompleted: false,
+  tab: 0,
+  loginLevel: "ortaokul",
+  // books
+  books: {items:[], page:1, totalPages:1, totalQuantity:0, loading:false, search:""},
+  reservations: [],
+  announcements: [],
+  homeLoading: true,
+  annImages: {}, // id -> [urls]
+};
+
+const $ = (s,r=document)=>r.querySelector(s);
+const app = $("#app");
+
+// ── API helper ──
+async function api(path,{method="GET",body=null,auth=false}={}){
+  const headers={"Content-Type":"application/json"};
+  if(auth && state.token) headers["Authorization"]="Bearer "+state.token;
+  const res=await fetch(API+path,{method,headers,body:body?JSON.stringify(body):null});
+  let data={};
+  try{ data=await res.json(); }catch(_){}
+  return {ok:res.status>=200&&res.status<300, status:res.status, data};
+}
+
+function toast(msg,type="error"){
+  const t=$("#toast");
+  t.textContent=msg;
+  t.style.background = type==="success"?"var(--success)":type==="info"?"var(--primary)":"var(--destructive)";
+  t.classList.add("show");
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>t.classList.remove("show"),2800);
+}
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function dateOnly(s){return s? String(s).split("T")[0] : null;}
+
+function daysRemaining(due){
+  if(!due) return 0;
+  const d=new Date(due); if(isNaN(d)) return 0;
+  const now=new Date(); const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const d0=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  return Math.round((d0-today)/86400000);
+}
+
+function saveSession(){
+  if(state.token) localStorage.setItem("student_token",state.token); else localStorage.removeItem("student_token");
+  if(state.schoolCode) localStorage.setItem("student_school_code",state.schoolCode); else localStorage.removeItem("student_school_code");
+  if(state.schoolLevel) localStorage.setItem("student_school_level",state.schoolLevel); else localStorage.removeItem("student_school_level");
+}
+
+function logout(){
+  state.token=null;state.user=null;state.profileCompleted=false;state.schoolCode=null;state.schoolLevel=null;
+  state.tab=0;state.reservations=[];state.announcements=[];
+  localStorage.removeItem("app_role");
+  saveSession();
+  renderLogin();
+}
+
+// ── SVG icons ──
+const I = {
+  school:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>',
+  book:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+  books:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  history:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>',
+  person:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  timer:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>',
+  calendar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  event:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  returned:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+  open:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  chevron:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+  back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>',
+  campaign:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>',
+  warning:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+  logout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+  personAdd:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>',
+  edit:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>',
+  person2:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+};
+
+// ══════════════════════════ LOGIN ══════════════════════════
+function renderLogin(){
+  state.loginLevel = state.schoolLevel || "ortaokul";
+  app.innerHTML = `
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <div class="ico">${I.school}</div>
+      <h1>Rafly</h1>
+      <p>Öğrenci Paneli</p>
+    </div>
+    <div class="auth-card">
+      <h2>Giriş Yap</h2>
+      <p class="sub">Devam etmek için bilgilerinizi girin</p>
+
+      <div class="mb14">
+        <label class="field-label">Okul Kodu</label>
+        <input class="input" id="in-school" inputmode="numeric" maxlength="12" placeholder="Okul kodunu girin">
+      </div>
+      <div class="mb14">
+        <label class="field-label">Okul Seviyesi</label>
+        <div class="levels" id="levels">
+          ${LEVELS.map(l=>`<button data-l="${l}" class="${l===state.loginLevel?'active':''}">${LEVEL_LABELS[l]}</button>`).join("")}
+        </div>
+      </div>
+      <div class="mb14">
+        <label class="field-label">Öğrenci Numarası</label>
+        <input class="input" id="in-number" inputmode="numeric" placeholder="1234">
+      </div>
+      <div class="mb16">
+        <label class="field-label">Şifre</label>
+        <div class="input-wrap">
+          <input class="input" id="in-pass" type="password" placeholder="Şifrenizi girin" style="padding-right:42px">
+          <button class="toggle-pass" id="toggle-pass" type="button">Göster</button>
+        </div>
+      </div>
+      <button class="btn" id="btn-login"><span>Giriş Yap</span></button>
+      <a href="../" style="display:block;text-align:center;margin-top:16px;font-size:13px;color:var(--text-secondary);text-decoration:none">← Ana sayfaya dön</a>
+    </div>
+  </div>`;
+
+  $("#levels").addEventListener("click",e=>{
+    const b=e.target.closest("button[data-l]"); if(!b)return;
+    state.loginLevel=b.dataset.l;
+    $("#levels").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));
+  });
+  const tp=$("#toggle-pass"), pass=$("#in-pass");
+  tp.addEventListener("click",()=>{ pass.type=pass.type==="password"?"text":"password"; tp.textContent=pass.type==="password"?"Göster":"Gizle"; });
+  pass.addEventListener("keydown",e=>{ if(e.key==="Enter") doLogin(); });
+  $("#btn-login").addEventListener("click",doLogin);
+}
+
+async function doLogin(){
+  const schoolCode=$("#in-school").value.trim();
+  const number=$("#in-number").value.trim();
+  const password=$("#in-pass").value;
+  if(!schoolCode||!number||!password){ toast("Tüm alanları doldurun"); return; }
+
+  const btn=$("#btn-login"); const prev=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const r=await api("/api/students/login",{method:"POST",body:{
+      schoolCode, student_number:number, password, school_level:state.loginLevel
+    }});
+    if(r.data && r.data.success===true){
+      state.token=r.data.token;
+      state.user=r.data.data||{};
+      state.schoolCode=schoolCode;
+      state.schoolLevel=state.loginLevel;
+      localStorage.setItem("app_role","student");
+      saveSession();
+      // fetch profile for completion flag
+      try{
+        const p=await api("/api/students/profile",{auth:true});
+        if(p.data && p.data.success===true){
+          state.user={...state.user,...p.data.data};
+          state.profileCompleted = p.data.data && p.data.data.profile_completed===true;
+        }
+      }catch(_){ state.profileCompleted=false; }
+      routeAfterAuth();
+    }else{
+      toast((r.data && r.data.message) || "Giriş yapılamadı");
+      btn.disabled=false; btn.innerHTML=prev;
+    }
+  }catch(e){
+    toast("Bağlantı hatası");
+    btn.disabled=false; btn.innerHTML=prev;
+  }
+}
+
+function routeAfterAuth(){
+  if(!state.profileCompleted){ renderProfileSetup(); }
+  else{ state.tab=0; renderShell(); }
+}
+
+// ══════════════════════════ PROFILE SETUP ══════════════════════════
+function renderProfileSetup(){
+  const name=`${state.user?.user_name||""} ${state.user?.user_surname||""}`.trim();
+  app.innerHTML=`
+  <div class="auth-wrap">
+    <div style="text-align:center;margin-bottom:8px">
+      <div style="width:80px;height:80px;border-radius:20px;background:var(--primary);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px">
+        <span style="width:40px;height:40px;color:#fff;display:inline-flex">${I.personAdd}</span>
+      </div>
+      <h2 style="font-size:22px;font-weight:700">Profilini Tamamla</h2>
+      <p style="font-size:13px;color:var(--text-secondary);margin-top:8px">Hoşgeldin ${esc(name)}! Devam etmek için bilgilerini tamamla.</p>
+    </div>
+    <div class="auth-card mt20">
+      <div class="mb16">
+        <label class="field-label">E-posta</label>
+        <input class="input" id="su-email" type="email" placeholder="ornek@email.com">
+      </div>
+      <div class="mb16">
+        <label class="field-label">Telefon Numarası</label>
+        <input class="input" id="su-phone" inputmode="tel" placeholder="05XX XXX XX XX">
+      </div>
+      <button class="btn" id="su-save"><span>Kaydet ve Devam Et</span></button>
+      <button class="btn btn-outline" id="su-logout" style="margin-top:12px">← Farklı Hesapla Giriş Yap</button>
+    </div>
+  </div>`;
+  $("#su-logout").addEventListener("click",logout);
+  $("#su-save").addEventListener("click",async()=>{
+    const email=$("#su-email").value.trim(), phone=$("#su-phone").value.trim();
+    if(!email||!phone){ toast("Email ve telefon numarası zorunludur."); return; }
+    if(!email.includes("@")){ toast("Geçerli bir email girin."); return; }
+    const btn=$("#su-save"); const prev=btn.innerHTML; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+    try{
+      const r=await api("/api/students/profile",{method:"PATCH",auth:true,body:{email,phone}});
+      if(r.data && r.data.success===true){
+        state.user={...state.user,...(r.data.data||{})};
+        state.profileCompleted=true;
+        state.tab=0; renderShell();
+      }else{ toast((r.data&&r.data.message)||"Hata oluştu"); btn.disabled=false; btn.innerHTML=prev; }
+    }catch(_){ toast("Bağlantı hatası"); btn.disabled=false; btn.innerHTML=prev; }
+  });
+}
+
+// ══════════════════════════ SHELL ══════════════════════════
+function renderShell(){
+  app.innerHTML=`
+    <div id="screen"></div>
+    <div class="bottom-nav" id="bnav">
+      ${[["Anasayfa",I.home],["Kitaplar",I.books],["Geçmiş",I.history],["Profil",I.person]].map((t,i)=>
+        `<button data-tab="${i}" class="${i===state.tab?'active':''}">${t[1]}<span>${t[0]}</span></button>`).join("")}
+    </div>`;
+  $("#bnav").addEventListener("click",e=>{
+    const b=e.target.closest("button[data-tab]"); if(!b)return;
+    state.tab=+b.dataset.tab;
+    $("#bnav").querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===b));
+    renderTab();
+  });
+  renderTab();
+}
+
+function renderTab(){
+  const s=$("#screen");
+  if(state.tab===0) renderHome(s);
+  else if(state.tab===1) renderBooks(s);
+  else if(state.tab===2) renderReservations(s);
+  else renderProfile(s);
+}
+
+// ── HOME ──
+async function renderHome(s){
+  const name=state.user?.user_name||"Öğrenci";
+  s.innerHTML=`
+    <div class="app-header">
+      <div class="avatar">${I.school}</div>
+      <div><div class="hi">Merhaba, ${esc(name)}</div><div class="sub">Kütüphane Panelin</div></div>
+    </div>
+    <div class="scroll-area" id="home-body">
+      <div class="center-loader"><div class="spinner spinner-primary"></div></div>
+    </div>`;
+
+  try{
+    const [rRes,aRes]=await Promise.all([
+      api("/api/students/reservations",{auth:true}),
+      api("/api/announcements?schoolCode="+encodeURIComponent(state.schoolCode||""),{auth:true}),
+    ]);
+    state.reservations = (rRes.data && rRes.data.success===true) ? (rRes.data.data||[]) : [];
+    const allAnn = (aRes.data && aRes.data.success===true) ? (aRes.data.data||[]) : [];
+    const now=new Date();
+    state.announcements = allAnn.filter(a=>annVisible(a,now));
+  }catch(_){ }
+
+  const body=$("#home-body"); if(!body) return;
+
+  const returned=state.reservations.filter(r=>r.status==="returned").length;
+  const active=state.reservations.find(r=>r.status==="loaned")||null;
+  const days = active? daysRemaining(active.due_date) : null;
+  const dColor = days==null?"var(--primary)":(days<0?"var(--destructive)":(days<=3?"var(--warning)":"var(--primary)"));
+
+  let html=`
+    <div class="stats">
+      <div class="stat">
+        <span style="color:var(--success)">${I.check}</span>
+        <div class="val" style="color:var(--success)">${returned}</div>
+        <div class="lbl">Okunan Kitap</div>
+      </div>
+      <div class="stat">
+        <span style="color:${dColor}">${I.timer}</span>
+        <div class="val" style="color:${dColor}">${active?days:"-"}</div>
+        <div class="lbl">Kalan Gün</div>
+      </div>
+    </div>`;
+
+  if(active){
+    const d=daysRemaining(active.due_date);
+    const bc = d<0?"var(--destructive)":(d<=3?"var(--warning)":"var(--success)");
+    const bbg = d<0?"rgba(220,38,38,.1)":(d<=3?"rgba(245,158,11,.1)":"rgba(22,163,74,.1)");
+    html+=`
+    <div class="section"><div class="card active-book">
+      <div class="row">
+        <span style="color:var(--primary);width:20px;height:20px;display:inline-flex">${I.book}</span>
+        <span class="cap">AKTİF KİTABIN</span>
+        <span class="badge" style="margin-left:auto;background:${bbg};color:${bc}">${d<0?Math.abs(d)+" gün gecikme":d+" gün kaldı"}</span>
+      </div>
+      <div class="book-title">${esc(active.book_name||"Bilinmeyen Kitap")}</div>
+      ${active.book_writer?`<div class="book-writer">${esc(active.book_writer)}</div>`:""}
+      <div class="meta">${I.calendar}<span>Teslim: ${esc(dateOnly(active.due_date)||"-")}</span></div>
+    </div></div>`;
+  }
+
+  html+=`
+    <div class="section">
+      <div class="section-title">Hızlı Erişim</div>
+      <button class="tile" id="go-books">
+        <span class="ti" style="background:rgba(26,51,102,.08);color:var(--primary)">${I.books}</span>
+        <span><span class="tt">Kitap Listesi</span><span class="ts">Okulundaki mevcut kitapları gör</span></span>
+        <span class="chev">${I.chevron}</span>
+      </button>
+      <button class="tile" id="go-hist">
+        <span class="ti" style="background:rgba(107,114,128,.08);color:var(--text-secondary)">${I.history}</span>
+        <span><span class="tt">Rezervasyon Geçmişi</span><span class="ts">Tüm ödünç ve iade kayıtların</span></span>
+        <span class="chev">${I.chevron}</span>
+      </button>
+    </div>`;
+
+  if(state.announcements.length){
+    html+=`<div class="section">
+      <div class="section-title" style="display:flex;align-items:center;gap:10px">
+        <span style="padding:6px;border-radius:8px;background:rgba(245,158,11,.1);color:var(--warning);display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center">${I.campaign}</span>
+        Bilgilendirmeler
+        <span class="badge" style="background:rgba(245,158,11,.1);color:var(--warning)">${state.announcements.length}</span>
+      </div>
+      <div id="ann-list">${state.announcements.map(annCard).join("")}</div>
+    </div>`;
+  }
+  html+=`<div style="height:20px"></div>`;
+  body.innerHTML=html;
+
+  $("#go-books").addEventListener("click",()=>{state.tab=1; syncNav(); renderTab();});
+  $("#go-hist").addEventListener("click",()=>{state.tab=2; syncNav(); renderTab();});
+
+  // lazy-load announcement images
+  state.announcements.forEach(a=>{
+    const cnt=a.image_count||0;
+    if(cnt>0) loadAnnImages(a.id);
+  });
+}
+
+function syncNav(){
+  const nav=$("#bnav"); if(!nav) return;
+  nav.querySelectorAll("button").forEach(x=>x.classList.toggle("active",+x.dataset.tab===state.tab));
+}
+
+function annVisible(a,now){
+  try{
+    const start=new Date(a.start_date), end=new Date(a.end_date);
+    if(isNaN(start)||isNaN(end)) return false;
+    if(now<start||now>end) return false;
+  }catch(_){ return false; }
+  const tt=(a.target_type||"all").toString();
+  if(tt==="all") return true;
+  let vals=[];
+  const raw=a.target_values;
+  if(Array.isArray(raw)) vals=raw.map(v=>String(v).trim()).filter(Boolean);
+  else if(typeof raw==="string" && raw.trim()){
+    try{ const p=JSON.parse(raw); if(Array.isArray(p)) vals=p.map(v=>String(v).trim()).filter(Boolean); }
+    catch(_){ vals=raw.split(",").map(v=>v.trim()).filter(Boolean); }
+  }
+  if(!vals.length) return true;
+  const userLevel=(state.schoolLevel||"").toLowerCase().trim();
+  const userClass=String(state.user?.user_class||state.user?.class_name||"").trim().toUpperCase();
+  const userNo=String(state.user?.student_number||"").trim();
+  if(tt==="school_level") return vals.map(v=>v.toLowerCase().trim()).includes(userLevel);
+  if(tt==="class") return vals.map(v=>v.toUpperCase().trim()).includes(userClass);
+  if(tt==="section") return vals.includes(userNo);
+  return false;
+}
+
+function annCard(a){
+  const title=String(a.title||""); const content=String(a.content||"");
+  const sender=String(a.sender_name||""); const end=dateOnly(a.end_date)||"";
+  const isWarn=title.includes("Uyarı")||title.includes("uyarı");
+  const accent=isWarn?"var(--destructive)":"var(--success)";
+  const cnt=a.image_count||0;
+  return `<div class="ann ${isWarn?'warn':''}">
+    <div class="ah">
+      ${isWarn?`<span style="color:var(--destructive);width:18px;height:18px;display:inline-flex">${I.warning}</span>`:""}
+      <span class="atitle" style="${isWarn?'color:var(--destructive)':''}">${esc(title)}</span>
+      <span class="badge" style="background:${isWarn?'rgba(220,38,38,.1)':'rgba(22,163,74,.1)'};color:${accent}">${isWarn?"Uyarı":"Yeni"}</span>
+    </div>
+    ${cnt>0?`<div class="ann-imgs" id="annimg-${a.id}"></div>`:""}
+    <div class="acontent" style="${isWarn?'color:rgba(220,38,38,.85)':''}">${esc(content)}</div>
+    <div class="afoot">
+      ${I.person2}<span style="font-weight:600;flex:1">${esc(sender)}</span>
+      ${I.calendar}<span>${esc(end)}</span>
+    </div>
+  </div>`;
+}
+
+async function loadAnnImages(id){
+  if(state.annImages[id]) { paintAnnImages(id); return; }
+  try{
+    const r=await api("/api/announcements/"+id+"/images",{auth:true});
+    const imgs=(r.data && r.data.success===true && Array.isArray(r.data.data))?r.data.data:[];
+    state.annImages[id]=imgs; paintAnnImages(id);
+  }catch(_){ }
+}
+function paintAnnImages(id){
+  const el=document.getElementById("annimg-"+id); if(!el) return;
+  const imgs=state.annImages[id]||[];
+  if(!imgs.length){ el.remove?.(); return; }
+  el.classList.toggle("single",imgs.length===1);
+  el.innerHTML=imgs.map((src,i)=>`<img src="${esc(src)}" data-i="${i}" loading="lazy" onerror="this.remove()">`).join("");
+  el.addEventListener("click",e=>{ const im=e.target.closest("img"); if(im) openLightbox(imgs,+im.dataset.i); });
+}
+
+// ── BOOKS ──
+let bookDebounce=null;
+async function renderBooks(s){
+  s.innerHTML=`
+    <div class="sub-header">
+      <div class="sh-top"><span class="sh-title">Kitap Listesi</span></div>
+      <div class="search-wrap">${I.search}<input class="input" id="bk-search" placeholder="Kitap veya yazar ara..." value="${esc(state.books.search)}"></div>
+    </div>
+    <div class="list-info"><span id="bk-total">Toplam: ${state.books.totalQuantity} adet kitap</span><span id="bk-page">Sayfa ${state.books.page}/${state.books.totalPages}</span></div>
+    <div class="scroll-area" style="padding:10px 16px 20px" id="bk-list"></div>`;
+  const inp=$("#bk-search");
+  inp.addEventListener("input",()=>{ clearTimeout(bookDebounce); bookDebounce=setTimeout(()=>{state.books.search=inp.value.trim(); fetchBooks(1);},400); });
+  fetchBooks(state.books.page||1);
+}
+
+async function fetchBooks(page){
+  const list=$("#bk-list"); if(list) list.innerHTML=`<div class="center-loader"><div class="spinner spinner-primary"></div></div>`;
+  try{
+    const q=encodeURIComponent(state.books.search||"");
+    const r=await api(`/api/schools/${encodeURIComponent(state.schoolCode)}/books?page=${page}&limit=30&search=${q}`);
+    const d=r.data||{};
+    const items=(d.books)||d.data||[];
+    state.books.items=items;
+    state.books.page=(d.pagination&&d.pagination.page)||1;
+    state.books.totalPages=(d.pagination&&d.pagination.totalPages)||1;
+    state.books.totalQuantity=(d.summary&&d.summary.totalQuantity)||d.totalQuantity||0;
+  }catch(_){ state.books.items=[]; }
+  paintBooks();
+}
+
+function paintBooks(){
+  const list=$("#bk-list"); if(!list) return;
+  const t=$("#bk-total"); if(t) t.textContent="Toplam: "+state.books.totalQuantity+" adet kitap";
+  const p=$("#bk-page"); if(p) p.textContent="Sayfa "+state.books.page+"/"+state.books.totalPages;
+  if(!state.books.items.length){ list.innerHTML=`<div class="empty">Kitap bulunamadı</div>`; return; }
+  let html=state.books.items.map(b=>{
+    const title=b.title||b.book_name||"Bilinmeyen";
+    const authors=Array.isArray(b.authors)?b.authors.join(", "):(b.authors||"");
+    const publisher=b.publisher||"";
+    const qty=b.quantity||0;
+    const avail=(b.available_quantity!=null?b.available_quantity:(b.availableQuantity!=null?b.availableQuantity:0));
+    return `<div class="book-row">
+      <div class="book-cover">${I.book}</div>
+      <div class="book-info">
+        <div class="t">${esc(title)}</div>
+        ${authors?`<div class="a">${esc(authors)}</div>`:""}
+        ${publisher?`<div class="p">${esc(publisher)}</div>`:""}
+      </div>
+      <div class="book-avail"><div class="n">${avail}/${qty}</div><div class="l">mevcut</div></div>
+    </div>`;
+  }).join("");
+  if(state.books.totalPages>1){
+    html+=`<div class="pager">
+      ${state.books.page>1?`<button data-pg="${state.books.page-1}">Önceki</button>`:""}
+      ${state.books.page<state.books.totalPages?`<button data-pg="${state.books.page+1}">Sonraki</button>`:""}
+    </div>`;
+  }
+  list.innerHTML=html;
+  list.querySelectorAll(".pager button").forEach(btn=>btn.addEventListener("click",()=>{fetchBooks(+btn.dataset.pg); list.scrollTop=0;}));
+}
+
+// ── RESERVATIONS ──
+async function renderReservations(s){
+  s.innerHTML=`
+    <div class="sub-header"><div class="sh-top"><span class="sh-title">Rezervasyon Geçmişi</span></div></div>
+    <div class="scroll-area" style="padding:16px" id="rz-list"><div class="center-loader"><div class="spinner spinner-primary"></div></div></div>`;
+  try{
+    const r=await api("/api/students/reservations",{auth:true});
+    state.reservations=(r.data&&r.data.success===true)?(r.data.data||[]):[];
+  }catch(_){ }
+  const list=$("#rz-list"); if(!list) return;
+  if(!state.reservations.length){ list.innerHTML=`<div class="empty">Henüz rezervasyon yok</div>`; return; }
+  list.innerHTML=state.reservations.map(rzCard).join("");
+}
+
+function statusInfo(st){
+  if(st==="loaned") return {lbl:"Ödünç Verildi",color:"var(--primary)",bg:"rgba(26,51,102,.1)",icon:I.open};
+  if(st==="returned") return {lbl:"İade Edildi",color:"var(--success)",bg:"rgba(22,163,74,.1)",icon:I.returned};
+  return {lbl:st||"-",color:"var(--text-secondary)",bg:"rgba(107,114,128,.1)",icon:I.book};
+}
+function rzCard(r){
+  const st=r.status||r.reservation_status;
+  const si=statusInfo(st);
+  const reserved=dateOnly(r.reserved_at)||"-";
+  const due=dateOnly(r.due_date);
+  const ret=dateOnly(r.returned_at);
+  let daysBadge="";
+  if(st==="loaned" && due){
+    const d=daysRemaining(r.due_date);
+    const c=d<0?"var(--destructive)":(d<=3?"var(--warning)":"var(--success)");
+    const bg=d<0?"rgba(220,38,38,.08)":(d<=3?"rgba(245,158,11,.08)":"rgba(22,163,74,.08)");
+    daysBadge=`<div style="margin-top:8px"><span class="badge" style="background:${bg};color:${c}">${d<0?Math.abs(d)+" gün gecikme!":d+" gün kaldı"}</span></div>`;
+  }
+  return `<div class="rz">
+    <div class="top">
+      <span class="ic" style="background:${si.bg};color:${si.color}">${si.icon}</span>
+      <span class="nm">${esc(r.book_name||"Bilinmeyen Kitap")}</span>
+      <span class="badge" style="background:${si.bg};color:${si.color}">${si.lbl}</span>
+    </div>
+    ${r.book_writer?`<div class="wr">${esc(r.book_writer)}</div>`:""}
+    <div class="dates">
+      <span>${I.calendar}Alınma: ${esc(reserved)}</span>
+      ${due?`<span>${I.event}Teslim: ${esc(due)}</span>`:""}
+      ${ret?`<span style="color:var(--success)">${I.returned}İade: ${esc(ret)}</span>`:""}
+    </div>
+    ${daysBadge}
+  </div>`;
+}
+
+// ── PROFILE ──
+let profEditing=false;
+function renderProfile(s){
+  const u=state.user||{};
+  const name=`${u.user_name||""} ${u.user_surname||""}`.trim();
+  const no=u.student_id||u.student_number||"-";
+  const cls=u.user_class||"-";
+  const email=u.email||"";
+  const phone=u.phone||"";
+  s.innerHTML=`
+    <div class="sub-header"><div class="sh-top"><span class="sh-title">Profil</span>
+      <button class="back" id="prof-edit-toggle" style="margin-left:auto;color:var(--text-secondary)">${profEditing?'✕':I.edit}</button>
+    </div></div>
+    <div class="scroll-area" style="padding:0 20px 20px">
+      <div class="prof-head">
+        <div class="prof-avatar">${esc(name?name[0].toUpperCase():"?")}</div>
+        <div class="prof-name">${esc(name)}</div>
+        <div class="prof-sub">Öğrenci No: ${esc(no)}&nbsp; |&nbsp; Sınıf: ${esc(cls)}</div>
+      </div>
+      <div style="height:24px"></div>
+      <div class="info-card">
+        <div class="info-row"><span class="k">Okul Kodu</span><span class="v">${esc(state.schoolCode||"-")}</span></div>
+        <div class="info-row"><span class="k">Okul Seviyesi</span><span class="v">${esc(LEVEL_LABELS[state.schoolLevel]||state.schoolLevel||"-")}</span></div>
+        <div class="info-row"><span class="k">Öğrenci No</span><span class="v">${esc(no)}</span></div>
+        <div class="info-row"><span class="k">Sınıf</span><span class="v">${esc(cls)}</span></div>
+      </div>
+      <div class="caps">İLETİŞİM BİLGİLERİ</div>
+      <div id="prof-contact"></div>
+      <div style="height:28px"></div>
+      <button class="btn btn-danger-outline" id="prof-logout">${I.logout}<span>Çıkış Yap</span></button>
+      <button class="btn-text" id="prof-delete" style="width:100%;margin-top:12px;display:flex;align-items:center;justify-content:center;gap:8px"><span style="width:18px;height:18px;display:inline-flex">${I.trash}</span>Hesabımı Sil</button>
+    </div>`;
+
+  paintContact(email,phone);
+  $("#prof-edit-toggle").addEventListener("click",()=>{ profEditing=!profEditing; renderProfile(s); });
+  $("#prof-logout").addEventListener("click",logout);
+  $("#prof-delete").addEventListener("click",confirmDelete);
+}
+
+function paintContact(email,phone){
+  const c=$("#prof-contact"); if(!c) return;
+  if(profEditing){
+    c.innerHTML=`
+      <label class="field-label">E-posta</label>
+      <input class="input mb16" id="pe-email" type="email" placeholder="ornek@email.com" value="${esc(email)}">
+      <label class="field-label">Telefon</label>
+      <input class="input mb16" id="pe-phone" inputmode="tel" placeholder="05XX XXX XX XX" value="${esc(phone)}">
+      <label class="field-label">Yeni Şifre (opsiyonel)</label>
+      <input class="input" id="pe-pass" type="password" placeholder="Boş bırakırsan değişmez" style="margin-bottom:20px">
+      <button class="btn" id="pe-save"><span>Kaydet</span></button>`;
+    $("#pe-save").addEventListener("click",saveProfile);
+  }else{
+    c.innerHTML=`<div class="info-card">
+      <div class="info-row"><span class="k">E-posta</span><span class="v">${email?esc(email):"Eklenmemiş"}</span></div>
+      <div class="info-row"><span class="k">Telefon</span><span class="v">${phone?esc(phone):"Eklenmemiş"}</span></div>
+    </div>`;
+  }
+}
+
+async function saveProfile(){
+  const email=$("#pe-email").value.trim(), phone=$("#pe-phone").value.trim(), pass=$("#pe-pass").value;
+  const body={};
+  if(email) body.email=email;
+  if(phone) body.phone=phone;
+  if(pass) body.password=pass;
+  const btn=$("#pe-save"); const prev=btn.innerHTML; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  try{
+    const r=await api("/api/students/profile",{method:"PATCH",auth:true,body});
+    if(r.data && r.data.success===true){
+      state.user={...state.user,...(r.data.data||{})};
+      profEditing=false;
+      toast("Profil güncellendi","success");
+      renderProfile($("#screen"));
+    }else{ toast((r.data&&r.data.message)||"Hata oluştu"); btn.disabled=false; btn.innerHTML=prev; }
+  }catch(_){ toast("Bağlantı hatası"); btn.disabled=false; btn.innerHTML=prev; }
+}
+
+function confirmDelete(){
+  const ov=document.createElement("div");
+  ov.className="modal-overlay";
+  ov.innerHTML=`<div class="modal">
+    <h3>Hesabımı Sil</h3>
+    <p>Hesabın ve tüm kişisel verilerin (profil, ödünç geçmişi) kalıcı olarak silinecek. Bu işlem geri alınamaz.<br><br>Devam etmek istiyor musun?</p>
+    <div class="acts">
+      <button class="btn btn-outline" id="md-cancel">Vazgeç</button>
+      <button class="btn" id="md-ok" style="background:var(--destructive)">Hesabımı Sil</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  $("#md-cancel",ov).addEventListener("click",()=>ov.remove());
+  $("#md-ok",ov).addEventListener("click",async()=>{
+    const btn=$("#md-ok",ov); btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+    try{
+      const r=await api("/api/students/profile",{method:"DELETE",auth:true});
+      if(r.data && r.data.success===true){ ov.remove(); toast("Hesabın silindi","success"); setTimeout(logout,900); }
+      else{ toast((r.data&&r.data.message)||"Hesap silinemedi"); btn.disabled=false; btn.textContent="Hesabımı Sil"; }
+    }catch(_){ toast("Bağlantı hatası"); btn.disabled=false; btn.textContent="Hesabımı Sil"; }
+  });
+}
+
+// ── LIGHTBOX ──
+function openLightbox(imgs,start){
+  let idx=start||0;
+  const lb=document.createElement("div"); lb.id="lightbox";
+  function draw(){ lb.innerHTML=`
+    <button class="lb-close">✕</button>
+    ${imgs.length>1?'<button class="lb-nav lb-prev">‹</button><button class="lb-nav lb-next">›</button>':''}
+    <img src="${esc(imgs[idx])}">
+    ${imgs.length>1?`<div class="lb-count">${idx+1}/${imgs.length}</div>`:''}`;
+    lb.querySelector(".lb-close").onclick=()=>lb.remove();
+    const pv=lb.querySelector(".lb-prev"), nx=lb.querySelector(".lb-next");
+    if(pv) pv.onclick=()=>{idx=(idx-1+imgs.length)%imgs.length; draw();};
+    if(nx) nx.onclick=()=>{idx=(idx+1)%imgs.length; draw();};
+  }
+  draw();
+  lb.addEventListener("click",e=>{ if(e.target===lb) lb.remove(); });
+  document.body.appendChild(lb);
+}
+
+// ══════════════════════════ BOOT ══════════════════════════
+async function boot(){
+  if(state.token){
+    app.innerHTML=`<div class="center-loader" style="padding-top:40vh"><div class="spinner spinner-primary"></div></div>`;
+    try{
+      const p=await api("/api/students/profile",{auth:true});
+      if(p.data && p.data.success===true){
+        state.user=p.data.data||{};
+        state.profileCompleted = state.user.profile_completed===true;
+        routeAfterAuth();
+        return;
+      }
+    }catch(_){ }
+    // token invalid
+    logout();
+    return;
+  }
+  renderLogin();
+}
+boot();
+</script>
+</body>
+</html>
