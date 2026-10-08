@@ -29,6 +29,9 @@ export function BarcodeScanner({
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<IScannerControls | null>(null);
   const doneRef = useRef(false);
+  // USB barkod okuyucu (keyboard-wedge) icin tus tamponu.
+  const wedgeBufRef = useRef("");
+  const wedgeTimeRef = useRef(0);
   // Parent her render'da yeni fonksiyon verirse kamera yeniden baslamasin diye ref'te tutuyoruz.
   const onDetectedRef = useRef(onDetected);
   onDetectedRef.current = onDetected;
@@ -40,13 +43,61 @@ export function BarcodeScanner({
     if (!open) return;
 
     doneRef.current = false;
+    wedgeBufRef.current = "";
+    wedgeTimeRef.current = 0;
     setError(null);
     setManual("");
+
+    // Okunan kodu (kamera veya USB okuyucu) tek yerden isle.
+    const commit = (raw: string) => {
+      const text = (raw || "").trim();
+      if (!text || doneRef.current) return;
+      doneRef.current = true;
+      controlsRef.current?.stop();
+      try {
+        navigator.vibrate?.(60);
+      } catch {
+        /* yoksay */
+      }
+      onDetectedRef.current(text);
+    };
+
+    // ── USB barkod okuyucu (keyboard-wedge) ──
+    // Cihaz kodu klavye gibi hizlica yazip Enter'a basar; kamera olmasa da calisir.
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (doneRef.current) return;
+      const t = e.target as HTMLElement | null;
+      // Elle giris kutusu kendi Enter'ini isler, karismayalim.
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+      if (e.key === "Enter" || e.key === "Tab") {
+        const code = wedgeBufRef.current.trim();
+        wedgeBufRef.current = "";
+        if (code.length >= 3) {
+          e.preventDefault();
+          commit(code);
+        }
+        return;
+      }
+      if (e.key.length === 1) {
+        const now = Date.now();
+        // Tuslar arasi 300ms'den uzun bosluk varsa yeni okuma say.
+        if (now - wedgeTimeRef.current > 300) wedgeBufRef.current = "";
+        wedgeTimeRef.current = now;
+        wedgeBufRef.current += e.key;
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
 
     let cancelled = false;
     const hints = new Map();
     hints.set(DecodeHintType.POSSIBLE_FORMATS, FORMATS);
-    const reader = new BrowserMultiFormatReader(hints);
+    // Bulanik/kucuk ISBN etiketlerinde cozulme sansini artirir (ozellikle iOS).
+    hints.set(DecodeHintType.TRY_HARDER, true);
+    const reader = new BrowserMultiFormatReader(hints, {
+      // Varsayilan 500ms; daha sik deneme = daha cabuk yakalama.
+      delayBetweenScanAttempts: 150,
+      delayBetweenScanSuccess: 300,
+    });
 
     (async () => {
       try {
@@ -54,20 +105,21 @@ export function BarcodeScanner({
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("unsupported");
 
         const controls = await reader.decodeFromConstraints(
-          { video: { facingMode: { ideal: "environment" } } },
+          {
+            video: {
+              facingMode: { ideal: "environment" },
+              // Daha yuksek cozunurluk kucuk barkodlari netlestirir (iOS'ta onemli).
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+          },
           videoRef.current!,
           (result, _err, ctrl) => {
             if (!result || doneRef.current) return;
             const text = result.getText().trim();
             if (!text) return;
-            doneRef.current = true;
             ctrl?.stop();
-            try {
-              navigator.vibrate?.(60);
-            } catch {
-              /* yoksay */
-            }
-            onDetectedRef.current(text);
+            commit(text);
           }
         );
 
@@ -82,21 +134,28 @@ export function BarcodeScanner({
         if (err.message === "insecure") {
           setError("Kamera yalnizca guvenli (HTTPS) baglantida calisir.");
         } else if (err.message === "unsupported") {
-          setError("Bu tarayici kamera erisimini desteklemiyor. Kodu elle girebilirsiniz.");
+          setError(
+            "Bu tarayici kamera erisimini desteklemiyor. USB barkod okuyucuyla okutabilir veya kodu elle girebilirsiniz."
+          );
         } else if (err.name === "NotAllowedError" || err.name === "SecurityError") {
           setError(
-            "Kamera izni verilmedi. Tarayici ayarlarindan kamera erisimine izin verip tekrar deneyin."
+            "Kamera izni verilmedi. USB barkod okuyucuyla okutabilir ya da izin verip tekrar deneyebilirsiniz."
           );
         } else if (err.name === "NotFoundError" || err.name === "OverconstrainedError") {
-          setError("Kullanilabilir bir kamera bulunamadi. Kodu elle girebilirsiniz.");
+          setError(
+            "Kullanilabilir bir kamera bulunamadi. USB barkod okuyucuyla okutabilir veya kodu elle girebilirsiniz."
+          );
         } else {
-          setError("Kamera baslatilamadi. Kodu elle girebilirsiniz.");
+          setError(
+            "Kamera baslatilamadi. USB barkod okuyucuyla okutabilir veya kodu elle girebilirsiniz."
+          );
         }
       }
     })();
 
     return () => {
       cancelled = true;
+      window.removeEventListener("keydown", onKeyDown);
       controlsRef.current?.stop();
       controlsRef.current = null;
     };
@@ -108,6 +167,7 @@ export function BarcodeScanner({
     const v = manual.trim();
     if (!v) return;
     doneRef.current = true;
+    controlsRef.current?.stop();
     onDetectedRef.current(v);
     setManual("");
   }
@@ -156,7 +216,7 @@ export function BarcodeScanner({
       <div className="space-y-3 bg-black/60 p-4">
         {!error && (
           <p className="text-center text-sm text-white/70">
-            Barkodu cerceveye hizalayin
+            Barkodu cerceveye hizalayin &mdash; veya USB okuyucuyla okutun
           </p>
         )}
         <div className="mx-auto flex max-w-md gap-2">
