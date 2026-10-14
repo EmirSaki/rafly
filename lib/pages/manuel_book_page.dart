@@ -33,6 +33,7 @@ class _ManualBookPageState extends State<ManualBookPage> {
   String statusMessage = "";
   Map<String, dynamic>? bookData;
   bool showForm = false;
+  bool isValilikBook = false;
 
   Future<void> searchBookByIsbn() async {
     final isbn = ApiService.normalizeIsbn(isbnController.text);
@@ -73,6 +74,7 @@ class _ManualBookPageState extends State<ManualBookPage> {
       setState(() {
         bookData = data;
         showForm = true;
+        isValilikBook = data["isValilikBook"] == true;
         statusMessage = "Kitap bulundu. Düzenleyip kaydedebilirsin.";
       });
     } catch (e) {
@@ -89,6 +91,7 @@ class _ManualBookPageState extends State<ManualBookPage> {
         pageCountController.clear();
         volumeCountController.text = "0";
         quantityController.text = "1";
+        isValilikBook = false;
       });
     } finally {
       if (!mounted) return;
@@ -145,6 +148,7 @@ class _ManualBookPageState extends State<ManualBookPage> {
           "coverUrl": coverUrl,
           "physicalDescription": pageCount > 0 ? "$pageCount sayfa" : "",
           "shelf": shelfController.text.trim(),
+          "isValilikBook": isValilikBook,
         },
         increaseQuantity: increaseQuantity,
       );
@@ -246,6 +250,39 @@ class _ManualBookPageState extends State<ManualBookPage> {
             style: const TextStyle(fontSize: 14, color: kTextPrimary),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildValilikCheckbox() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: kBackground,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: kBorder),
+        ),
+        child: CheckboxListTile(
+          value: isValilikBook,
+          onChanged: (value) =>
+              setState(() => isValilikBook = value ?? false),
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+          dense: true,
+          title: const Text(
+            "Valilik Kitabı",
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: kTextPrimary,
+            ),
+          ),
+          subtitle: const Text(
+            "Bu kitap valilik tarafından sağlandıysa işaretleyin.",
+            style: TextStyle(fontSize: 12, color: kTextSecondary),
+          ),
+        ),
       ),
     );
   }
@@ -435,6 +472,7 @@ class _ManualBookPageState extends State<ManualBookPage> {
                           controller: shelfController,
                           textCapitalization: TextCapitalization.characters,
                         ),
+                        _buildValilikCheckbox(),
                         const SizedBox(height: 4),
                         SizedBox(
                           width: double.infinity,

@@ -30,6 +30,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
   bool isLoading = true;
   bool isSaving = false;
   bool isCoverUploading = false;
+  bool isValilikBook = false;
   String statusMessage = "";
   Book? book;
 
@@ -291,6 +292,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
     categoriesController.text = b.categories.join(", ");
     pageCountController.text = b.pageCount > 0 ? b.pageCount.toString() : "";
     shelfController.text = b.shelf ?? "";
+    isValilikBook = b.isValilikBook;
   }
 
   Future<void> loadBookDetail() async {
@@ -371,6 +373,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
         categories: categories,
         pageCount: pageCount,
         shelf: shelfController.text.trim(),
+        isValilikBook: isValilikBook,
       );
 
       if (!mounted) return;
@@ -608,6 +611,41 @@ class _BookDetailPageState extends State<BookDetailPage> {
                           label: "Raf",
                           controller: shelfController,
                           hint: "Örn: A-3 (boş bırakılabilir)",
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: kMuted,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: kBorder),
+                            ),
+                            child: CheckboxListTile(
+                              value: isValilikBook,
+                              onChanged: isSaving
+                                  ? null
+                                  : (value) => setState(
+                                      () => isValilikBook = value ?? false),
+                              controlAffinity:
+                                  ListTileControlAffinity.leading,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 8),
+                              dense: true,
+                              title: const Text(
+                                "Valilik Kitabı",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: kTextPrimary,
+                                ),
+                              ),
+                              subtitle: const Text(
+                                "Bu kitap valilik tarafından sağlandıysa işaretleyin.",
+                                style: TextStyle(
+                                    fontSize: 12, color: kTextSecondary),
+                              ),
+                            ),
+                          ),
                         ),
                         if (statusMessage.isNotEmpty) ...[
                           const SizedBox(height: 12),

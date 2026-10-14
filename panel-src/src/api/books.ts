@@ -56,6 +56,7 @@ export interface AddBookToSchoolPayload {
   quantity: number;
   pageCount?: number;
   volumeCount?: number;
+  isValilikBook?: boolean;
 }
 
 export async function addBookToSchool({
@@ -75,6 +76,7 @@ export interface UpdateSchoolBookPayload {
   publisher?: string;
   categories?: string[];
   page_count?: number;
+  is_valilik_book?: boolean;
 }
 
 export async function updateSchoolBookQuantity(

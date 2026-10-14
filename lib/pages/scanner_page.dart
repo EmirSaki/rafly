@@ -25,6 +25,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
   String statusMessage = "Barkodu okut";
   Map<String, dynamic>? bookData;
+  bool isValilikBook = false;
 
   final TextEditingController shelfController = TextEditingController();
   final TextEditingController titleController = TextEditingController();
@@ -120,6 +121,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
       setState(() {
         bookData = data;
+        isValilikBook = data["isValilikBook"] == true;
         statusMessage = "Kitap bulundu. Düzenleyip kaydedebilirsin.";
       });
     } catch (e) {
@@ -134,6 +136,7 @@ class _ScannerPageState extends State<ScannerPage> {
         pageCountController.clear();
         volumeController.text = "0";
         quantityController.text = "1";
+        isValilikBook = false;
         statusMessage = "Kitap bulunamadı. Bilgileri düzenleyebilirsin.";
       });
     } finally {
@@ -191,6 +194,7 @@ class _ScannerPageState extends State<ScannerPage> {
           "pageCount": pageCount,
           "physicalDescription": pageCount > 0 ? "$pageCount sayfa" : "",
           "shelf": shelfController.text.trim(),
+          "isValilikBook": isValilikBook,
         },
         increaseQuantity: increaseQuantity,
       );
@@ -493,6 +497,38 @@ class _ScannerPageState extends State<ScannerPage> {
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       textCapitalization: TextCapitalization.none,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: kBackground,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: kBorder),
+                        ),
+                        child: CheckboxListTile(
+                          value: isValilikBook,
+                          onChanged: (value) =>
+                              setState(() => isValilikBook = value ?? false),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 8),
+                          dense: true,
+                          title: const Text(
+                            "Valilik Kitabı",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: kTextPrimary,
+                            ),
+                          ),
+                          subtitle: const Text(
+                            "Bu kitap valilik tarafından sağlandıysa işaretleyin.",
+                            style: TextStyle(
+                                fontSize: 12, color: kTextSecondary),
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 4),
                     SizedBox(

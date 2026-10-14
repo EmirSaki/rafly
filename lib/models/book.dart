@@ -11,6 +11,7 @@ class Book {
   final int volumeCount;
   final String? shelf;
   final String? coverUrl;
+  final bool isValilikBook;
 
   Book({
     this.bookId,
@@ -25,7 +26,18 @@ class Book {
     this.volumeCount = 0,
     this.shelf,
     this.coverUrl,
+    this.isValilikBook = false,
   });
+
+  static bool _toBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final v = value.trim().toLowerCase();
+      return v == 'true' || v == 't' || v == '1';
+    }
+    return false;
+  }
 
   static List<String> _toStringList(dynamic value) {
     if (value == null) return [];
@@ -75,6 +87,7 @@ class Book {
         final raw = (json['cover_url'] ?? json['coverUrl'] ?? '').toString().trim();
         return raw.isEmpty ? null : raw;
       })(),
+      isValilikBook: _toBool(json['is_valilik_book'] ?? json['isValilikBook']),
     );
   }
 
@@ -92,6 +105,7 @@ class Book {
       'volumeCount': volumeCount,
       'shelf': shelf,
       'cover_url': coverUrl,
+      'is_valilik_book': isValilikBook,
     };
   }
 }

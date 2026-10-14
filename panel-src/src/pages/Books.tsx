@@ -106,7 +106,14 @@ export function BooksPage() {
         <div className="flex items-center gap-3">
           <BookCover book={b} />
           <div className="min-w-0">
-            <p className="font-medium truncate">{b.title}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="font-medium truncate">{b.title}</p>
+              {b.is_valilik_book && (
+                <Badge variant="info" className="shrink-0">
+                  Valilik
+                </Badge>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground truncate">
               {(b.authors || []).join(", ") || "-"}
             </p>
@@ -275,6 +282,31 @@ function BookCover({ book }: { book: SchoolBook }) {
   );
 }
 
+function ValilikCheckbox({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border bg-muted/30 p-3">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary"
+      />
+      <span className="text-sm">
+        <span className="font-medium">Valilik Kitabı</span>
+        <span className="block text-xs text-muted-foreground">
+          Bu kitap valilik tarafından sağlanan bir kitapsa işaretleyin.
+        </span>
+      </span>
+    </label>
+  );
+}
+
 interface UpdateQtyButtonProps {
   book: SchoolBook;
   schoolCode: string;
@@ -288,6 +320,7 @@ function UpdateQtyButton({ book, schoolCode, onUpdated }: UpdateQtyButtonProps) 
   const [publisher, setPublisher] = useState(book.publisher || "");
   const [categories, setCategories] = useState((book.categories || []).join(", "));
   const [pageCount, setPageCount] = useState(book.page_count || 0);
+  const [isValilik, setIsValilik] = useState(Boolean(book.is_valilik_book));
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -297,6 +330,7 @@ function UpdateQtyButton({ book, schoolCode, onUpdated }: UpdateQtyButtonProps) 
         publisher,
         categories: categories.split(",").map((c) => c.trim()).filter(Boolean),
         page_count: pageCount,
+        is_valilik_book: isValilik,
       };
       return updateSchoolBookQuantity(schoolCode, book.book_id, payload);
     },
@@ -314,6 +348,7 @@ function UpdateQtyButton({ book, schoolCode, onUpdated }: UpdateQtyButtonProps) 
     setPublisher(book.publisher || "");
     setCategories((book.categories || []).join(", "));
     setPageCount(book.page_count || 0);
+    setIsValilik(Boolean(book.is_valilik_book));
     setOpen(true);
   }
 
@@ -375,6 +410,7 @@ function UpdateQtyButton({ book, schoolCode, onUpdated }: UpdateQtyButtonProps) 
               onChange={(e) => setQty(Number(e.target.value))}
             />
           </div>
+          <ValilikCheckbox checked={isValilik} onChange={setIsValilik} />
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setOpen(false)}>
               İptal
@@ -402,6 +438,7 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
   const [result, setResult] = useState<IsbnLookupResult | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [scanOpen, setScanOpen] = useState(false);
+  const [isValilik, setIsValilik] = useState(false);
 
   // Otomatik kayit bulunamadiginda elle giris formu
   const [notFound, setNotFound] = useState(false);
@@ -429,6 +466,7 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
     setSearching(true);
     setResult(null);
     resetManual();
+    setIsValilik(false);
     try {
       const data = await getBookByIsbn(normalized);
       if (!data) {
@@ -438,6 +476,7 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
         return;
       }
       setResult(data);
+      setIsValilik(Boolean(data.isValilikBook));
     } catch (err) {
       // Backend kitap bulunamayinca 404 firlatiyor -> elle ekleme formunu ac
       if (getErrorStatus(err) === 404) {
@@ -469,6 +508,7 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
         pageCount: result.pageCount,
         volumeCount: result.volumeCount,
         quantity,
+        isValilikBook: isValilik,
       });
     },
     onSuccess: () => {
@@ -500,6 +540,7 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
         pageCount: mPageCount || 0,
         volumeCount: 0,
         quantity,
+        isValilikBook: isValilik,
       });
     },
     onSuccess: () => {
@@ -515,6 +556,7 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
     setResult(null);
     setQuantity(1);
     setScanOpen(false);
+    setIsValilik(false);
     resetManual();
     onClose();
   }
@@ -600,6 +642,8 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
             onChange={(e) => setQuantity(Number(e.target.value))}
           />
 
+          <ValilikCheckbox checked={isValilik} onChange={setIsValilik} />
+
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={handleClose}>
               İptal
@@ -674,6 +718,8 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
               onChange={(e) => setQuantity(Number(e.target.value))}
             />
           </div>
+
+          <ValilikCheckbox checked={isValilik} onChange={setIsValilik} />
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={handleClose}>

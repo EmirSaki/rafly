@@ -66,6 +66,7 @@ export interface SchoolBook {
   available_quantity: number;
   total_quantity?: number;
   cover_url?: string | null;
+  is_valilik_book?: boolean;
 }
 
 export type ReservationStatus =
@@ -110,4 +111,5 @@ export interface IsbnLookupResult {
   volumeCount: number;
   hasVolumes: boolean;
   volumes: Array<{ volumeNo: number; title: string }>;
+  isValilikBook?: boolean;
 }

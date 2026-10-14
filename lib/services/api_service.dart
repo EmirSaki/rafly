@@ -147,6 +147,8 @@ class ApiService {
       "physicalDescription": (data["physicalDescription"] ?? "").toString(),
       "coverUrl": (data["coverUrl"] ?? data["cover_url"] ?? "").toString(),
       "source": (data["source"] ?? "").toString(),
+      "isValilikBook":
+          data["isValilikBook"] == true || data["is_valilik_book"] == true,
     };
   }
 
@@ -266,6 +268,8 @@ class ApiService {
       ) ?? 0,
       "coverUrl": (data["coverUrl"] ?? data["cover_url"] ?? "").toString(),
       "source": (data["source"] ?? "school_db").toString(),
+      "isValilikBook":
+          data["is_valilik_book"] == true || data["isValilikBook"] == true,
     };
   }
 
@@ -300,6 +304,7 @@ class ApiService {
         "shelf": (bookData["shelf"]?.toString().trim().isEmpty ?? true)
             ? null
             : bookData["shelf"].toString().trim(),
+        "isValilikBook": bookData["isValilikBook"] == true,
       }),
     );
 
@@ -380,6 +385,7 @@ class ApiService {
     List<String>? categories,
     int? pageCount,
     String? shelf,
+    bool? isValilikBook,
   }) async {
     final url = Uri.parse("$baseUrl/api/schools/$schoolCode/books/$bookId");
 
@@ -392,6 +398,7 @@ class ApiService {
     if (categories != null) body["categories"] = categories;
     if (pageCount != null) body["page_count"] = pageCount;
     if (shelf != null) body["shelf"] = shelf;
+    if (isValilikBook != null) body["is_valilik_book"] = isValilikBook;
 
     final response = await http.patch(
       url,
