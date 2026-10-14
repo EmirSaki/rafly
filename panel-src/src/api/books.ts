@@ -72,6 +72,7 @@ export async function addBookToSchool({
 
 export interface UpdateSchoolBookPayload {
   quantity: number;
+  book_name?: string;
   authors?: string[];
   publisher?: string;
   categories?: string[];

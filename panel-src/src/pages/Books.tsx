@@ -33,6 +33,7 @@ export function BooksPage() {
 
   const [search, setSearch] = useState("");
   const [isbnSearchOpen, setIsbnSearchOpen] = useState(false);
+  const [detailBook, setDetailBook] = useState<SchoolBook | null>(null);
 
   const { data: books, isLoading } = useQuery({
     queryKey: ["school-books", schoolCode],
@@ -182,19 +183,24 @@ export function BooksPage() {
       width: "120px",
       render: (b) => (
         <div className="flex justify-end gap-1">
-          <UpdateQtyButton
-            book={b}
-            schoolCode={schoolCode}
-            onUpdated={() =>
-              queryClient.invalidateQueries({
-                queryKey: ["school-books", schoolCode],
-              })
-            }
-          />
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => handleDelete(b)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setDetailBook(b);
+            }}
+            title="Kitap künyesini aç"
+          >
+            <Pencil size={14} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(b);
+            }}
             className="text-destructive hover:text-destructive"
           >
             <Trash2 size={14} />
@@ -244,6 +250,7 @@ export function BooksPage() {
         loading={isLoading}
         emptyText="Envanterde kitap yok"
         getRowKey={(b) => b.book_id}
+        onRowClick={(b) => setDetailBook(b)}
       />
 
       <AddBookModal
@@ -251,6 +258,17 @@ export function BooksPage() {
         onClose={() => setIsbnSearchOpen(false)}
         schoolCode={schoolCode}
         onAdded={() =>
+          queryClient.invalidateQueries({
+            queryKey: ["school-books", schoolCode],
+          })
+        }
+      />
+
+      <BookDetailModal
+        book={detailBook}
+        schoolCode={schoolCode}
+        onClose={() => setDetailBook(null)}
+        onSaved={() =>
           queryClient.invalidateQueries({
             queryKey: ["school-books", schoolCode],
           })
@@ -307,14 +325,52 @@ function ValilikCheckbox({
   );
 }
 
-interface UpdateQtyButtonProps {
-  book: SchoolBook;
+interface BookDetailModalProps {
+  book: SchoolBook | null;
   schoolCode: string;
-  onUpdated: () => void;
+  onClose: () => void;
+  onSaved: () => void;
 }
 
-function UpdateQtyButton({ book, schoolCode, onUpdated }: UpdateQtyButtonProps) {
-  const [open, setOpen] = useState(false);
+function BookDetailModal({
+  book,
+  schoolCode,
+  onClose,
+  onSaved,
+}: BookDetailModalProps) {
+  return (
+    <Modal
+      open={!!book}
+      onClose={onClose}
+      title="Kitap Künyesi"
+      description={book?.title}
+      size="lg"
+    >
+      {book && (
+        <BookDetailForm
+          key={book.book_id}
+          book={book}
+          schoolCode={schoolCode}
+          onClose={onClose}
+          onSaved={onSaved}
+        />
+      )}
+    </Modal>
+  );
+}
+
+function BookDetailForm({
+  book,
+  schoolCode,
+  onClose,
+  onSaved,
+}: {
+  book: SchoolBook;
+  schoolCode: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [title, setTitle] = useState(book.title || "");
   const [qty, setQty] = useState(book.quantity);
   const [authors, setAuthors] = useState((book.authors || []).join(", "));
   const [publisher, setPublisher] = useState(book.publisher || "");
@@ -324,8 +380,10 @@ function UpdateQtyButton({ book, schoolCode, onUpdated }: UpdateQtyButtonProps) 
 
   const mutation = useMutation({
     mutationFn: () => {
+      if (!title.trim()) throw new Error("Kitap adı boş olamaz");
       const payload: UpdateSchoolBookPayload = {
         quantity: qty,
+        book_name: title.trim(),
         authors: authors.split(",").map((a) => a.trim()).filter(Boolean),
         publisher,
         categories: categories.split(",").map((c) => c.trim()).filter(Boolean),
@@ -336,92 +394,102 @@ function UpdateQtyButton({ book, schoolCode, onUpdated }: UpdateQtyButtonProps) 
     },
     onSuccess: () => {
       toast.success("Kitap bilgileri güncellendi");
-      onUpdated();
-      setOpen(false);
+      onSaved();
+      onClose();
     },
     onError: (err) => toast.error(getErrorMessage(err)),
   });
 
-  function handleOpen() {
-    setQty(book.quantity);
-    setAuthors((book.authors || []).join(", "));
-    setPublisher(book.publisher || "");
-    setCategories((book.categories || []).join(", "));
-    setPageCount(book.page_count || 0);
-    setIsValilik(Boolean(book.is_valilik_book));
-    setOpen(true);
-  }
+  const coverUrl = (book.cover_url || "").trim();
 
   return (
-    <>
-      <Button variant="ghost" size="sm" onClick={handleOpen}>
-        <Pencil size={14} />
-      </Button>
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Kitap Düzenle"
-        description={book.title}
-        size="lg"
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">ISBN</p>
-              <p className="text-sm font-mono bg-muted/50 rounded px-2 py-1.5">{book.isbn}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Kitap Adı</p>
-              <p className="text-sm bg-muted/50 rounded px-2 py-1.5">{book.title}</p>
-            </div>
+    <div className="space-y-4">
+      <div className="flex gap-4">
+        <div className="h-36 w-24 flex-shrink-0 overflow-hidden rounded-md border border-border bg-muted flex items-center justify-center">
+          {coverUrl ? (
+            <img
+              src={coverUrl}
+              alt={book.title}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <BookOpen size={28} className="text-muted-foreground" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">ISBN</p>
+            <p className="text-sm font-mono bg-muted/50 rounded px-2 py-1.5">
+              {book.isbn || "-"}
+            </p>
           </div>
-          <Input
-            label="Yazar(lar)"
-            placeholder="Virgülle ayırarak yazın"
-            value={authors}
-            onChange={(e) => setAuthors(e.target.value)}
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Yayınevi"
-              value={publisher}
-              onChange={(e) => setPublisher(e.target.value)}
-            />
-            <Input
-              label="Tür"
-              placeholder="Virgülle ayırarak yazın"
-              value={categories}
-              onChange={(e) => setCategories(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Sayfa Sayısı"
-              type="number"
-              min={0}
-              value={pageCount}
-              onChange={(e) => setPageCount(Number(e.target.value))}
-            />
-            <Input
-              label="Toplam Adet"
-              type="number"
-              min={0}
-              value={qty}
-              onChange={(e) => setQty(Number(e.target.value))}
-            />
-          </div>
-          <ValilikCheckbox checked={isValilik} onChange={setIsValilik} />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              İptal
-            </Button>
-            <Button onClick={() => mutation.mutate()} loading={mutation.isPending}>
-              Güncelle
-            </Button>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Stok Durumu</p>
+            <Badge
+              variant={
+                book.available_quantity === 0
+                  ? "destructive"
+                  : book.available_quantity < 3
+                  ? "warning"
+                  : "success"
+              }
+            >
+              {book.available_quantity} / {book.quantity} müsait
+            </Badge>
           </div>
         </div>
-      </Modal>
-    </>
+      </div>
+
+      <Input
+        label="Kitap Adı"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+      <Input
+        label="Yazar(lar)"
+        placeholder="Virgülle ayırarak yazın"
+        value={authors}
+        onChange={(e) => setAuthors(e.target.value)}
+      />
+      <div className="grid grid-cols-2 gap-3">
+        <Input
+          label="Yayınevi"
+          value={publisher}
+          onChange={(e) => setPublisher(e.target.value)}
+        />
+        <Input
+          label="Tür"
+          placeholder="Virgülle ayırarak yazın"
+          value={categories}
+          onChange={(e) => setCategories(e.target.value)}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Input
+          label="Sayfa Sayısı"
+          type="number"
+          min={0}
+          value={pageCount}
+          onChange={(e) => setPageCount(Number(e.target.value))}
+        />
+        <Input
+          label="Toplam Adet"
+          type="number"
+          min={0}
+          value={qty}
+          onChange={(e) => setQty(Number(e.target.value))}
+        />
+      </div>
+      <ValilikCheckbox checked={isValilik} onChange={setIsValilik} />
+      <div className="flex justify-end gap-2 pt-2">
+        <Button variant="outline" onClick={onClose}>
+          İptal
+        </Button>
+        <Button onClick={() => mutation.mutate()} loading={mutation.isPending}>
+          Güncelle
+        </Button>
+      </div>
+    </div>
   );
 }
 
