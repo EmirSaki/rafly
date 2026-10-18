@@ -442,7 +442,7 @@ class _BookListPageState extends State<BookListPage> {
           onTap: book.bookId == null
               ? null
               : () async {
-                  final changed = await Navigator.push(
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => BookDetailPage(
@@ -451,7 +451,9 @@ class _BookListPageState extends State<BookListPage> {
                       ),
                     ),
                   );
-                  if (changed == true) await refreshBooks();
+                  // Detaydan dönünce listeyi her zaman tazele: kapak yükleme
+                  // gibi değişiklikler de (pop sonucu dönmese bile) yansısın.
+                  if (mounted) await refreshBooks();
                 },
           child: Container(
             padding: const EdgeInsets.all(14),
