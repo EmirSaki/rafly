@@ -70,13 +70,15 @@ export function BooksPage() {
     }
     const saved = await exportToCsv(
       `kitaplar-${schoolCode}`,
-      ["ISBN", "Kitap Adı", "Yazar", "Tür", "Yayınevi", "Sayfa", "Müsait", "Toplam"],
+      ["ISBN", "Kitap Adı", "Yazar", "Tür", "Yayınevi", "Raf", "Valilik Kitabı", "Sayfa", "Müsait", "Toplam"],
       filtered.map((b) => [
         b.isbn,
         b.title,
         (b.authors || []).join(", ") || "-",
         (b.categories || []).join(", ") || "-",
         b.publisher || "-",
+        (b.shelf || "").trim() || "-",
+        b.is_valilik_book ? "Evet" : "Hayır",
         String(b.page_count || 0),
         String(b.available_quantity),
         String(b.quantity),

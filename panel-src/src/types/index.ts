@@ -67,6 +67,7 @@ export interface SchoolBook {
   total_quantity?: number;
   cover_url?: string | null;
   is_valilik_book?: boolean;
+  shelf?: string | null;
 }
 
 export type ReservationStatus =
