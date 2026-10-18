@@ -39,6 +39,9 @@ class _ShelfBatchScanPageState extends State<ShelfBatchScanPage> {
   // aktarılır ki aynı sorgu ikinci kez atılmasın.
   final Map<String, Future<Map<String, dynamic>?>> _prefetch = {};
   String? _shelf;
+  // Raf adı dialogunda seçilir: true ise bu oturumda taranan tüm kitaplar
+  // doğrulama ekranında otomatik "valilik kitabı" işaretli gelir.
+  bool _valilikAll = false;
   String statusMessage = "Bir kitabın barkodunu okut";
 
   @override
@@ -77,46 +80,69 @@ class _ShelfBatchScanPageState extends State<ShelfBatchScanPage> {
 
     if (!mounted) return;
 
+    bool pickValilik = _valilikAll;
     final result = await showDialog<String>(
       context: context,
       barrierDismissible: !isInitial,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(isInitial ? "Raf Adı" : "Rafı Değiştir"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                isInitial
-                    ? "Bu oturumda taranan kitaplar bu rafa kaydedilecek."
-                    : "Bundan sonra taranan kitaplar yeni rafa kaydedilecek.",
-                style: const TextStyle(fontSize: 13, color: kTextSecondary),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                  hintText: "Örn: A-3 / Roman Rafı",
+        return StatefulBuilder(
+          builder: (ctx, setLocal) => AlertDialog(
+            title: Text(isInitial ? "Raf Adı" : "Rafı Değiştir"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isInitial
+                      ? "Bu oturumda taranan kitaplar bu rafa kaydedilecek."
+                      : "Bundan sonra taranan kitaplar yeni rafa kaydedilecek.",
+                  style: const TextStyle(fontSize: 13, color: kTextSecondary),
                 ),
-                onSubmitted: (v) =>
-                    Navigator.of(dialogContext).pop(v.trim()),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    hintText: "Örn: A-3 / Roman Rafı",
+                  ),
+                  onSubmitted: (v) =>
+                      Navigator.of(dialogContext).pop(v.trim()),
+                ),
+                const SizedBox(height: 4),
+                CheckboxListTile(
+                  value: pickValilik,
+                  onChanged: (v) => setLocal(() => pickValilik = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text(
+                    "Valilik kitapları",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: kTextPrimary,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    "Bu rafta taranan tüm kitaplar valilik kitabı olarak kaydedilir.",
+                    style: TextStyle(fontSize: 12, color: kTextSecondary),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              if (!isInitial)
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text("Vazgeç"),
+                ),
+              ElevatedButton(
+                onPressed: () =>
+                    Navigator.of(dialogContext).pop(controller.text.trim()),
+                child: const Text("Onayla"),
               ),
             ],
           ),
-          actions: [
-            if (!isInitial)
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text("Vazgeç"),
-              ),
-            ElevatedButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext).pop(controller.text.trim()),
-              child: const Text("Onayla"),
-            ),
-          ],
         );
       },
     );
@@ -132,7 +158,10 @@ class _ShelfBatchScanPageState extends State<ShelfBatchScanPage> {
       return;
     }
 
-    setState(() => _shelf = result);
+    setState(() {
+      _shelf = result;
+      _valilikAll = pickValilik;
+    });
     await _restartScanner();
   }
 
@@ -230,6 +259,7 @@ class _ShelfBatchScanPageState extends State<ShelfBatchScanPage> {
           shelf: _shelf!,
           isbns: List<String>.from(_isbns),
           prefetched: Map<String, Future<Map<String, dynamic>?>>.from(_prefetch),
+          valilikAll: _valilikAll,
         ),
       ),
     );

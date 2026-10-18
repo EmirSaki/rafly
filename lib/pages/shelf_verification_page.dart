@@ -42,12 +42,17 @@ class ShelfVerificationPage extends StatefulWidget {
   /// Her Future, kitap verisini ya da bulunamadıysa null döndürür (hata atmaz).
   final Map<String, Future<Map<String, dynamic>?>>? prefetched;
 
+  /// Raf adı dialogunda "Valilik kitapları" seçildiyse true: bu oturumdaki
+  /// tüm kitaplar varsayılan olarak valilik kitabı işaretli gelir.
+  final bool valilikAll;
+
   const ShelfVerificationPage({
     super.key,
     required this.schoolCode,
     required this.shelf,
     required this.isbns,
     this.prefetched,
+    this.valilikAll = false,
   });
 
   @override
@@ -61,7 +66,13 @@ class _ShelfVerificationPageState extends State<ShelfVerificationPage> {
   @override
   void initState() {
     super.initState();
-    _rows = widget.isbns.map((isbn) => _BookRow(isbn)).toList();
+    _rows = widget.isbns.map((isbn) {
+      final row = _BookRow(isbn);
+      // "Valilik kitapları" seçildiyse tüm satırlar varsayılan işaretli gelsin
+      // (bulunamayan/elle girilenler dahil); kullanıcı tek tek değiştirebilir.
+      row.isValilik = widget.valilikAll;
+      return row;
+    }).toList();
     // Her satırın sorgusunu paralel başlat (tek tek dolsun diye await yok)
     for (final row in _rows) {
       _lookup(row);
@@ -102,7 +113,8 @@ class _ShelfVerificationPageState extends State<ShelfVerificationPage> {
           ApiService.normalizeStringList(data["categories"]).join(", ");
       row.pageC.text = '${data["pageCount"] ?? 0}';
       row.volumeCount = int.tryParse('${data["volumeCount"] ?? 0}') ?? 0;
-      row.isValilik = data["isValilikBook"] == true;
+      // Valilik kitapları seçiliyse zorla işaretli; değilse katalogdan ön-doldur
+      row.isValilik = widget.valilikAll || (data["isValilikBook"] == true);
       setState(() {
         row.status = RowStatus.found;
         row.message = null;
