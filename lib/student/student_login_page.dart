@@ -149,6 +149,11 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
                           if (!_loading) _handleLogin();
                         },
                       ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Giriş şifreniz: 1234',
+                        style: TextStyle(fontSize: 12, color: kTextSecondary),
+                      ),
                       const SizedBox(height: 20),
 
                       SizedBox(

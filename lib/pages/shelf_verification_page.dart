@@ -17,6 +17,7 @@ class _BookRow {
   final TextEditingController pageC = TextEditingController();
   final TextEditingController quantityC = TextEditingController(text: "1");
   int volumeCount = 0;
+  bool isValilik = false;
 
   _BookRow(this.isbn) : status = RowStatus.loading;
 
@@ -101,6 +102,7 @@ class _ShelfVerificationPageState extends State<ShelfVerificationPage> {
           ApiService.normalizeStringList(data["categories"]).join(", ");
       row.pageC.text = '${data["pageCount"] ?? 0}';
       row.volumeCount = int.tryParse('${data["volumeCount"] ?? 0}') ?? 0;
+      row.isValilik = data["isValilikBook"] == true;
       setState(() {
         row.status = RowStatus.found;
         row.message = null;
@@ -129,6 +131,7 @@ class _ShelfVerificationPageState extends State<ShelfVerificationPage> {
       "pageCount": pageCount,
       "physicalDescription": pageCount > 0 ? "$pageCount sayfa" : "",
       "shelf": widget.shelf,
+      "isValilikBook": row.isValilik,
     };
   }
 
@@ -436,6 +439,28 @@ class _ShelfVerificationPageState extends State<ShelfVerificationPage> {
                   child: _field("Adet", row.quantityC, number: true),
                 ),
               ],
+            ),
+            CheckboxListTile(
+              value: row.isValilik,
+              onChanged: row.status == RowStatus.saving
+                  ? null
+                  : (value) =>
+                      setState(() => row.isValilik = value ?? false),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text(
+                "Valilik Kitabı",
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: kTextPrimary,
+                ),
+              ),
+              subtitle: const Text(
+                "Valilik tarafından sağlandıysa işaretle.",
+                style: TextStyle(fontSize: 11, color: kTextSecondary),
+              ),
             ),
             if (row.message != null) ...[
               const SizedBox(height: 4),

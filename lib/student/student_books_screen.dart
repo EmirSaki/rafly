@@ -139,15 +139,7 @@ class _StudentBooksScreenState extends State<StudentBooksScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 58,
-            decoration: BoxDecoration(
-              color: kMuted,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(child: Icon(Icons.menu_book_rounded, color: kPrimary, size: 22)),
-          ),
+          _cover((data['cover_url'] ?? data['coverUrl'] ?? '').toString()),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -177,6 +169,50 @@ class _StudentBooksScreenState extends State<StudentBooksScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _cover(String? rawUrl) {
+    final url = (rawUrl ?? '').trim();
+    const double w = 44, h = 58;
+
+    Widget placeholder() => Container(
+          width: w,
+          height: h,
+          decoration: BoxDecoration(
+            color: kMuted,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Center(
+            child: Icon(Icons.menu_book_rounded, color: kPrimary, size: 22),
+          ),
+        );
+
+    if (url.isEmpty) return placeholder();
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(
+        url,
+        width: w,
+        height: h,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder(),
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return SizedBox(
+            width: w,
+            height: h,
+            child: const Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

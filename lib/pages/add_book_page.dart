@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../main.dart';
 import 'scanner_page.dart';
 import 'manuel_book_page.dart';
+import 'shelf_batch_scan_page.dart';
 
 class AddBookPage extends StatelessWidget {
   final String schoolCode;
@@ -72,6 +73,22 @@ class AddBookPage extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => ManualBookPage(schoolCode: schoolCode),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildOptionCard(
+                context,
+                icon: Icons.shelves,
+                title: "Raf Olarak Ekle",
+                subtitle: "Bir rafı arka arkaya taratarak toplu ekle",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ShelfBatchScanPage(schoolCode: schoolCode),
                     ),
                   );
                 },
