@@ -248,6 +248,7 @@ class ApiService {
     final data = Map<String, dynamic>.from(decoded["data"] ?? {});
 
     return {
+      "book_id": data["book_id"],
       "title": (data["title"] ?? data["book_name"] ?? "").toString(),
       "authors": normalizeStringList(
         data["authors"] ?? data["book_writer"],

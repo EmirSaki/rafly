@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../models/book.dart';
 import '../main.dart';
 import 'book_detail_page.dart';
+import 'isbn_scan_page.dart';
 
 class BookListPage extends StatefulWidget {
   final String schoolCode;
@@ -131,6 +132,64 @@ class _BookListPageState extends State<BookListPage> {
 
   Future<void> refreshBooks() async {
     await loadBooks(page: currentPage);
+  }
+
+  // Barkod tara → kitap okul envanterinde varsa künyesini aç, yoksa bilgilendir.
+  Future<void> _scanAndFind() async {
+    final isbn = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => const IsbnScanPage()),
+    );
+    if (!mounted || isbn == null || isbn.trim().isEmpty) return;
+
+    // Kısa bir yükleniyor göstergesi
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final data = await ApiService.fetchSchoolBookByIsbn(
+        schoolCode: widget.schoolCode,
+        isbn: isbn,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(); // yükleniyor dialog'unu kapat
+
+      final book = Book.fromJson(data);
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              BookDetailPage(schoolCode: widget.schoolCode, book: book),
+        ),
+      );
+      if (mounted) await refreshBooks();
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // yükleniyor dialog'unu kapat
+
+      final msg = e.toString().toLowerCase();
+      final notFound = msg.contains("bulunamad");
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(notFound ? "Kitap Bulunamadı" : "Hata"),
+          content: Text(
+            notFound
+                ? "ISBN: $isbn\n\nBu kitap henüz kütüphaneye eklenmedi."
+                : e.toString().replaceFirst("Exception: ", ""),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text("Tamam"),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   Future<void> exportBooks(String format) async {
@@ -551,6 +610,11 @@ class _BookListPageState extends State<BookListPage> {
       appBar: AppBar(
         title: const Text('Kitap Listesi'),
         actions: [
+          IconButton(
+            tooltip: 'Barkod tara',
+            icon: const Icon(Icons.qr_code_scanner),
+            onPressed: _scanAndFind,
+          ),
           PopupMenuButton<String>(
             onSelected: exportBooks,
             icon: const Icon(Icons.download_outlined),
