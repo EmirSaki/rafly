@@ -6,8 +6,12 @@ import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl =
-      "https://library-api-346058361420.europe-west1.run.app";
+  // Varsayılan canlı API. Yerel backend için:
+  // flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8080
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: "https://library-api-346058361420.europe-west1.run.app",
+  );
 
   static const MethodChannel _channel = MethodChannel('library_export_channel');
 
