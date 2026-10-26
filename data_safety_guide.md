@@ -1,5 +1,10 @@
 # Data Safety Form Rehberi - Play Console
 
+> 20 Ekim 2026 denetimi: Bu belge gönderilmiş bir Play Console beyanı değildir.
+> Yayınlanan uygulama, backend ve tüm SDK veri akışlarıyla doğrulanmalıdır.
+> Backend'de ortak öğrenci şifresi ve plain_password saklama tespit edildi;
+> HTTPS kullanılması bu güvenlik sorunlarını çözmez. Yayın öncesi giderilmelidir.
+
 Bu rehberi Play Console > Uygulama icerigi > Veri guvenligi bolumunde
 adim adim takip et.
 
@@ -10,7 +15,7 @@ adim adim takip et.
 | Soru | Cevap |
 |------|-------|
 | Uygulamaniz herhangi bir kullanici verisi topluyor mu? | EVET |
-| Uygulamaniz herhangi bir kullanici verisini ucuncu taraflarla paylasiyor mu? | HAYIR |
+| Uygulamaniz herhangi bir kullanici verisini ucuncu taraflarla paylasiyor mu? | Google Cloud hizmet sağlayıcısı, okul içi görsel aktarımı ve okullar arasında görülen kapaklar için Google'ın paylaşım tanımları/istisnaları doğrulanmalı; otomatik HAYIR seçilmemeli |
 | Uygulamaniz verileri sifreleme ile mi aktariyor? | EVET (HTTPS) |
 | Kullanicilar verilerinin silinmesini talep edebilir mi? | EVET |
 
@@ -31,7 +36,7 @@ adim adim takip et.
   (rezervasyonlar, odunc gecmisi)
 
 ### Uygulama Bilgileri ve Performansi
-- [x] Tanilamalar (crash log varsa - Flutter default)
+- [ ] Tanılamalar: Flutter varsayılan olarak geliştiriciye crash raporu gönderiyor varsayımı yapılmamalı. Kullanılan SDK'lar (ML Kit dahil) ve sunucu logları ayrıca incelenmeli.
 
 ### Cihaz veya Diger Kimlikler
 - [ ] Cihaz kimligi - HAYIR, toplanmiyor
@@ -49,13 +54,13 @@ adim adim takip et.
 - [ ] HAYIR
 
 ### Fotograf ve Videolar
-- [ ] HAYIR (kamera sadece barkod tarama icin, goruntu kaydedilmiyor)
+- [x] Fotoğraflar: isteğe bağlı kitap kapağı, okul logosu ve duyuru görselleri sunucuya yükleniyor. Kapaklar kamera ile de çekilebiliyor. Barkod görüntüsünün yerel işlenmesi bu yüklemeleri kapsamıyor.
 
 ### Ses
 - [ ] HAYIR
 
 ### Dosyalar ve Belgeler
-- [ ] HAYIR
+- [x] Excel öğrenci listesi sunucuya yüklenip işleniyor. Dosya/belge ve içerdiği kişisel veriler, saklama davranışıyla birlikte beyan edilmeli.
 
 ### Takvim
 - [ ] HAYIR
@@ -117,14 +122,14 @@ adim adim takip et.
 | Soru | Cevap |
 |------|-------|
 | Hedef kitle 13 yas altini iceriyor mu? | EVET (okul uygulamasi) |
-| Families Policy gereksinimlerine uyuyor mu? | EVET |
+| Families Policy gereksinimlerine uyuyor mu? | Çocuk verileri, SDK uygunluğu ve içerik için ayrıca doğrulanmalı; bu rehber uyumluluk kanıtı değildir |
 | Reklam var mi? | HAYIR |
-| Ucuncu parti SDK ile veri paylasimi var mi? | HAYIR |
+| Ucuncu parti SDK ile veri paylasimi var mi? | SDK sağlayıcılarının güncel veri açıklamalarıyla doğrulanmalı |
 
-NOT: "Hedef kitle" bolumunde "13 yas alti" secersen Google daha siki
-inceleme yapar. "Herkes" secip aciklamada "okul ortaminda kullanilmak
-uzere tasarlanmistir" yazmak daha guvenli bir stratejidir.
-Onerilen hedef kitle secimi: "13-17 yas" ve "18 yas ustu"
+Gerçek hedef yaş gruplarını seç. Ortaokul öğrencileri hedef kitlenin içindeyken
+13 yaş altını incelemeden kaçınmak için dışlama. İlkokul gerçekten destekleniyorsa
+ilgili yaş gruplarını da değerlendir. Çocukları hedefleyen uygulamalar Families
+politikasını sağlamalıdır. Önceki rehberin yalnız 13+ seçme önerisi yanlıştı.
 
 ---
 
@@ -132,8 +137,22 @@ Onerilen hedef kitle secimi: "13-17 yas" ve "18 yas ustu"
 
 | Izin | Aciklama |
 |------|----------|
-| CAMERA | Kitap barkodlarini (ISBN) taramak icin kullanilir |
+| CAMERA | Kitap barkodlarını taramak ve kullanıcı isteğiyle kitap kapağı fotoğrafı çekmek için |
 | INTERNET | Kutuphane verilerini sunucuyla senkronize etmek icin |
 | POST_NOTIFICATIONS | Kitap iade hatirlatmalari ve okul duyurulari icin |
 | RECEIVE_BOOT_COMPLETED | Zamanlanmis bildirimlerin cihaz yeniden baslatildiktan sonra da calismasi icin |
 | WRITE_EXTERNAL_STORAGE | Kitap listesini Excel/PDF olarak indirmek icin (Android 9 ve alti) |
+
+## Yayın öncesi ek doğrulamalar
+
+- Gizlilik metnine kapak, logo, duyuru görseli ve Excel veri akışlarını ekle.
+- Gizlilikteki yalnız bcrypt ile şifre saklama iddiası, backend'deki düz metin saklama giderilmeden doğru değildir.
+- Hesap silmeyi sentetik test hesabında ilişkili verilerle birlikte doğrula. Yedek saklama süresini ayrıca açıkla.
+- İncelemeciye ayrı test okulunda öğrenci ve yetkili hesapları, okul kodu ve kademe bilgisi sağla.
+- Gizlilik URL: https://raflylib.online/privacy.html
+- Hesap silme URL: https://raflylib.online/hesap-silme.html
+
+Kaynaklar: [Veri Güvenliği](https://support.google.com/googleplay/android-developer/answer/10787469?hl=en),
+[Families](https://support.google.com/googleplay/android-developer/answer/9893335?hl=en),
+[Kullanıcı verileri](https://support.google.com/googleplay/android-developer/answer/10144311?hl=en),
+[Hesap silme](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en).

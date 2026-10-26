@@ -10,6 +10,8 @@ class Book {
   final int pageCount;
   final int volumeCount;
   final String? shelf;
+  // Kitabın bulunduğu raf etiketleri (çoklu). Raf başına adet tutulmaz.
+  final List<String> shelves;
   final String? coverUrl;
   final bool isValilikBook;
 
@@ -25,6 +27,7 @@ class Book {
     this.pageCount = 0,
     this.volumeCount = 0,
     this.shelf,
+    this.shelves = const [],
     this.coverUrl,
     this.isValilikBook = false,
   });
@@ -83,6 +86,14 @@ class Book {
       shelf: (json['shelf'] == null || json['shelf'].toString().trim().isEmpty)
           ? null
           : json['shelf'].toString().trim(),
+      shelves: (() {
+        // Backend 'shelves' alanını etiket listesi olarak döndürür.
+        // Boşsa tek 'shelf' değerine düş (geriye dönük uyum).
+        final list = _toStringList(json['shelves']);
+        if (list.isNotEmpty) return list;
+        final single = (json['shelf'] ?? '').toString().trim();
+        return single.isEmpty ? <String>[] : <String>[single];
+      })(),
       coverUrl: (() {
         final raw = (json['cover_url'] ?? json['coverUrl'] ?? '').toString().trim();
         return raw.isEmpty ? null : raw;
@@ -104,6 +115,7 @@ class Book {
       'pageCount': pageCount,
       'volumeCount': volumeCount,
       'shelf': shelf,
+      'shelves': shelves,
       'cover_url': coverUrl,
       'is_valilik_book': isValilikBook,
     };

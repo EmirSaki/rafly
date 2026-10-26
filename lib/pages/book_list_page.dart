@@ -561,6 +561,27 @@ class _BookListPageState extends State<BookListPage> {
                         style: const TextStyle(
                             fontSize: 12, color: kTextSecondary),
                       ),
+                      if (book.shelves.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.shelves,
+                                size: 13, color: kTextSecondary),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                book.shelves.join(", "),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: kPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),

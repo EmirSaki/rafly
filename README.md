@@ -1,10 +1,35 @@
-# denemee
+# Rafly
 
-A new Flutter project.
+Okul kütüphane yönetim sistemi. Üç modülden oluşur:
 
-## Getting Started
+| Modül | Klasör | Açıklama |
+|---|---|---|
+| Frontend (mobil) | `/` (`lib/`, `android/`, `ios/`) | Flutter uygulaması (`com.rafly.app`) |
+| Backend | `backend/` | Node.js / Express + PostgreSQL API (Cloud Run) |
+| Web | `docs/`, `panel-src/` | raflylib.online landing sayfası, öğrenci paneli (`docs/ogrenci`) ve personel paneli kaynağı (`panel-src`, çıktı `docs/panel`) |
 
-This project is a starting point for a Flutter application.
+## Backend
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+Ortam değişkenleri `backend/.env` içinde tutulur (git'e eklenmez).
+Deploy: `cd backend && gcloud run deploy library-api --source . --region europe-west1`
+
+## Frontend
+
+```bash
+flutter pub get
+flutter run
+```
+
+## Web
+
+GitHub Pages `docs/` klasöründen yayınlanır. Personel paneli değişikliği `panel-src/` içinde yapılır,
+`npm run build` çıktısı `docs/panel/` altına kopyalanır.
 
 A few resources to get you started if this is your first Flutter project:
 

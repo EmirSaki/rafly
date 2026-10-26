@@ -165,12 +165,20 @@ class _StudentListPageState extends State<StudentListPage> {
   }
 
   String _nextDigerNumber() {
-    int max = 9999;
+    // 10000'den itibaren boş olan ilk numarayı bul (10000, 10001, ...).
+    // Eski/anormal yüksek numaralar yok sayılır; her zaman 10000'den gider.
+    final used = <int>{};
     for (final s in students) {
+      final level = s["school_level"]?.toString().trim().toLowerCase() ?? "";
+      if (level != "diğer") continue;
       final num = int.tryParse(s["student_number"]?.toString() ?? "") ?? 0;
-      if (num >= 10000 && num > max) max = num;
+      if (num >= 10000) used.add(num);
     }
-    return (max + 1).toString();
+    int next = 10000;
+    while (used.contains(next)) {
+      next++;
+    }
+    return next.toString();
   }
 
   void showAddStudentDialog() {

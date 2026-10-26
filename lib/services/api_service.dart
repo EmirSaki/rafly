@@ -386,6 +386,7 @@ class ApiService {
     List<String>? categories,
     int? pageCount,
     String? shelf,
+    List<String>? shelves,
     bool? isValilikBook,
   }) async {
     final url = Uri.parse("$baseUrl/api/schools/$schoolCode/books/$bookId");
@@ -399,6 +400,9 @@ class ApiService {
     if (categories != null) body["categories"] = categories;
     if (pageCount != null) body["page_count"] = pageCount;
     if (shelf != null) body["shelf"] = shelf;
+    // Çoklu raf etiketleri (raf başına adet yok). Gönderilirse raf kümesi
+    // tam olarak bununla değiştirilir.
+    if (shelves != null) body["shelves"] = shelves;
     if (isValilikBook != null) body["is_valilik_book"] = isValilikBook;
 
     final response = await http.patch(

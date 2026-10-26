@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'providers/student_auth_provider.dart';
 import 'pages/school_login_page.dart';
 import 'pages/home_page.dart';
@@ -284,8 +285,21 @@ class RoleSelectionPage extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 48),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  children: [
+                    TextButton(
+                      onPressed: () => _openPolicy(context, 'privacy.html'),
+                      child: const Text('Gizlilik Politikası'),
+                    ),
+                    TextButton(
+                      onPressed: () => _openPolicy(context, 'hesap-silme.html'),
+                      child: const Text('Hesap Silme'),
+                    ),
+                  ],
+                ),
                 const Text(
-                  'Rafly v1.0.0',
+                  'Rafly v1.0.1',
                   style: TextStyle(fontSize: 11, color: kTextSecondary),
                 ),
               ],
@@ -293,6 +307,22 @@ class RoleSelectionPage extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _openPolicy(BuildContext context, String path) async {
+    try {
+      final opened = await launchUrl(
+        Uri.https('raflylib.online', path),
+        mode: LaunchMode.externalApplication,
+      );
+      if (opened) return;
+    } catch (_) {
+      // Keep the login screen usable when no browser is available.
+    }
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Sayfa açılamadı: https://raflylib.online/$path')),
     );
   }
 }

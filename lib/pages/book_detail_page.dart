@@ -25,7 +25,10 @@ class _BookDetailPageState extends State<BookDetailPage> {
   final TextEditingController publisherController = TextEditingController();
   final TextEditingController categoriesController = TextEditingController();
   final TextEditingController pageCountController = TextEditingController();
+  // Yeni raf etiketi girişi (çoklu raf). Raf başına adet tutulmaz.
   final TextEditingController shelfController = TextEditingController();
+  // Kitabın bulunduğu raf etiketleri.
+  List<String> _shelves = [];
 
   bool isLoading = true;
   bool isSaving = false;
@@ -291,8 +294,25 @@ class _BookDetailPageState extends State<BookDetailPage> {
     publisherController.text = b.publisher;
     categoriesController.text = b.categories.join(", ");
     pageCountController.text = b.pageCount > 0 ? b.pageCount.toString() : "";
-    shelfController.text = b.shelf ?? "";
+    shelfController.clear();
+    _shelves = List<String>.from(b.shelves);
     isValilikBook = b.isValilikBook;
+  }
+
+  /// Giriş alanındaki raf etiketini listeye ekler (tekilleştirir).
+  void _addShelf() {
+    final value = shelfController.text.trim();
+    if (value.isEmpty) return;
+    final exists =
+        _shelves.any((s) => s.toLowerCase() == value.toLowerCase());
+    setState(() {
+      if (!exists) _shelves.add(value);
+      shelfController.clear();
+    });
+  }
+
+  void _removeShelf(String label) {
+    setState(() => _shelves.remove(label));
   }
 
   Future<void> loadBookDetail() async {
@@ -358,6 +378,14 @@ class _BookDetailPageState extends State<BookDetailPage> {
 
     final pageCount = int.tryParse(pageCountController.text.trim()) ?? 0;
 
+    // Giriş alanında kalan raf etiketi varsa listeye dahil et.
+    final pendingShelf = shelfController.text.trim();
+    final shelves = List<String>.from(_shelves);
+    if (pendingShelf.isNotEmpty &&
+        !shelves.any((s) => s.toLowerCase() == pendingShelf.toLowerCase())) {
+      shelves.add(pendingShelf);
+    }
+
     try {
       setState(() {
         isSaving = true;
@@ -372,7 +400,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
         publisher: publisherController.text.trim(),
         categories: categories,
         pageCount: pageCount,
-        shelf: shelfController.text.trim(),
+        shelves: shelves,
         isValilikBook: isValilikBook,
       );
 
@@ -533,6 +561,84 @@ class _BookDetailPageState extends State<BookDetailPage> {
     );
   }
 
+  /// Çoklu raf etiketi editörü: kitabın bulunduğu rafları (etiket olarak)
+  /// ekleyip çıkarır. Raf başına adet tutulmaz — sadece kitabın hangi
+  /// raflarda bulunabileceğini gösterir.
+  Widget _buildShelfEditor() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Raflar",
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: kTextSecondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          if (_shelves.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _shelves
+                    .map(
+                      (label) => Chip(
+                        label: Text(label),
+                        labelStyle: const TextStyle(
+                          fontSize: 13,
+                          color: kTextPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        backgroundColor: kMuted,
+                        side: const BorderSide(color: kBorder),
+                        deleteIcon: const Icon(Icons.close, size: 16),
+                        onDeleted: isSaving ? null : () => _removeShelf(label),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: shelfController,
+                  textCapitalization: TextCapitalization.characters,
+                  style: const TextStyle(fontSize: 14, color: kTextPrimary),
+                  onSubmitted: isSaving ? null : (_) => _addShelf(),
+                  decoration: const InputDecoration(
+                    hintText: "Örn: A-3 (boş bırakılabilir)",
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                height: 46,
+                child: ElevatedButton.icon(
+                  onPressed: isSaving ? null : _addShelf,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text("Ekle"),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            "Bir kitap birden fazla rafta olabilir. Raf başına adet tutulmaz.",
+            style: TextStyle(fontSize: 11, color: kTextSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentBook = book ?? widget.book;
@@ -607,11 +713,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                             FilteringTextInputFormatter.digitsOnly,
                           ],
                         ),
-                        _buildEditableField(
-                          label: "Raf",
-                          controller: shelfController,
-                          hint: "Örn: A-3 (boş bırakılabilir)",
-                        ),
+                        _buildShelfEditor(),
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: Container(
