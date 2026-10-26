@@ -24,11 +24,17 @@ test('level scope never removes another level', () => {
   const p = buildPromotionPlan([row(1, '1', 'Ali Ak'), row(2, '2', 'Ece Ak', '12A', 'lise')], [row(null, '1', 'Ali Ak', '7A')], 'ortaokul');
   assert.equal(p.removed.length, 0);
 });
-test('duplicates and empty input abort instead of silently deleting', () => {
+test('empty or duplicated incoming input aborts instead of silently deleting', () => {
   const s = row(1, '1', 'Ali Ak');
   assert.throws(() => buildPromotionPlan([s], [], 'all'));
   assert.throws(() => buildPromotionPlan([s], [s, s], 'all'));
-  assert.throws(() => buildPromotionPlan([s, s], [s], 'all'));
+});
+test('duplicates in the existing roster are merged into one survivor', () => {
+  const a = row(1, '1', 'Ali Ak');
+  const b = row(2, '1', 'Ali Ak');
+  const p = buildPromotionPlan([a, b], [a], 'all');
+  assert.equal(p.merges.length, 1);
+  assert.equal(p.merges[0].duplicates.length, 1);
 });
 test('scope mismatch and final same-class number collisions abort', () => {
   const s = row(1, '1', 'Ali Ak');
