@@ -1461,7 +1461,8 @@ const getMyReservations = async (req, res, next) => {
         b.book_name,
         b.book_writer,
         b.publisher,
-        b.isbn
+        b.isbn,
+        b.cover_url
       FROM ${schemaName}.reservations r
       JOIN public.books b ON b.book_id = r.book_id
       WHERE r.user_id = $1
