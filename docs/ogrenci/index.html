@@ -288,6 +288,7 @@ input{font-family:inherit}
 .modal .acts{display:flex;gap:10px}
 .modal .acts .btn{height:42px}
 </style>
+<link rel="stylesheet" href="student-theme.css">
 </head>
 <body>
 <div id="app"></div>
@@ -338,6 +339,19 @@ function toast(msg,type="error"){
 }
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+
+// Reuse only covers supplied by our API; never guess an ISBN cover URL.
+function bookCover(book, extraClass=""){
+  const raw=String(book.cover_url || book.coverUrl || "").trim();
+  let url="";
+  try {
+    if(raw){ const parsed=new URL(raw, API+"/");
+      if(parsed.protocol==="https:" || parsed.protocol==="http:") url=parsed.href;
+    }
+  } catch(_) {}
+  return `<span class="cover-art ${extraClass}" aria-hidden="true"><span class="symbolic-book"></span>${url?`<img src="${esc(url)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onload="this.parentElement.classList.add('cover-loaded')" onerror="this.remove()">`:""}</span>`;
+}
+
 function dateOnly(s){return s? String(s).split("T")[0] : null;}
 
 function daysRemaining(due){
@@ -544,6 +558,7 @@ function renderShell(){
 }
 
 function renderTab(){
+  stopBookLoading();
   const s=$("#screen");
   if(state.tab===0) renderHome(s);
   else if(state.tab===1) renderBooks(s);
@@ -600,7 +615,8 @@ async function renderHome(s){
     const bc = d<0?"var(--destructive)":(d<=3?"var(--warning)":"var(--success)");
     const bbg = d<0?"rgba(220,38,38,.1)":(d<=3?"rgba(245,158,11,.1)":"rgba(22,163,74,.1)");
     html+=`
-    <div class="section"><div class="card active-book">
+    <div class="section active-section"><div class="card active-book">
+      ${bookCover(active,"hero-cover")}<div class="active-copy">
       <div class="row">
         <span style="color:var(--primary);width:20px;height:20px;display:inline-flex">${I.book}</span>
         <span class="cap">AKTİF KİTABIN</span>
@@ -609,11 +625,11 @@ async function renderHome(s){
       <div class="book-title">${esc(active.book_name||"Bilinmeyen Kitap")}</div>
       ${active.book_writer?`<div class="book-writer">${esc(active.book_writer)}</div>`:""}
       <div class="meta">${I.calendar}<span>Teslim: ${esc(dateOnly(active.due_date)||"-")}</span></div>
-    </div></div>`;
+    </div></div></div>`;
   }
 
   html+=`
-    <div class="section">
+    <div class="section quick-section">
       <div class="section-title">Hızlı Erişim</div>
       <button class="tile" id="go-books">
         <span class="ti" style="background:rgba(26,51,102,.08);color:var(--primary)">${I.books}</span>
@@ -719,48 +735,88 @@ function paintAnnImages(id){
 }
 
 // ── BOOKS ──
-let bookDebounce=null;
+let bookDebounce=null, bookObserver=null, bookGeneration=0;
+function stopBookLoading(){
+  clearTimeout(bookDebounce);
+  if(bookObserver) bookObserver.disconnect();
+  bookObserver=null;
+  bookGeneration++;
+}
 async function renderBooks(s){
   s.innerHTML=`
-    <div class="sub-header">
-      <div class="sh-top"><span class="sh-title">Kitap Listesi</span></div>
-      <div class="search-wrap">${I.search}<input class="input" id="bk-search" placeholder="Kitap veya yazar ara..." value="${esc(state.books.search)}"></div>
+    <div class="sub-header books-header">
+      <div class="search-wrap">${I.search}<input class="input" id="bk-search" aria-label="Kitap veya yazar ara" placeholder="Kitap veya yazar ara..." value="${esc(state.books.search)}"></div>
+      <div class="sh-top"><span class="sh-title">Kitap Listesi</span><span id="bk-total"></span></div>
     </div>
-    <div class="list-info"><span id="bk-total">Toplam: ${state.books.totalQuantity} adet kitap</span><span id="bk-page">Sayfa ${state.books.page}/${state.books.totalPages}</span></div>
-    <div class="scroll-area" style="padding:10px 16px 20px" id="bk-list"></div>`;
+    <div id="bk-list" class="scroll-area">
+      <div class="book-columns"><span>Kitap</span><span>Mevcut</span></div>
+      <div id="bk-rows"></div>
+      <div id="bk-status" role="status" aria-live="polite"></div>
+      <div id="bk-sentinel" aria-hidden="true"></div>
+    </div>`;
   const inp=$("#bk-search");
-  inp.addEventListener("input",()=>{ clearTimeout(bookDebounce); bookDebounce=setTimeout(()=>{state.books.search=inp.value.trim(); fetchBooks(1);},400); });
-  fetchBooks(state.books.page||1);
+  inp.addEventListener("input",()=>{
+    clearTimeout(bookDebounce);
+    bookGeneration++; // Ignore any response for the previous search immediately.
+    if(bookObserver) bookObserver.disconnect();
+    bookDebounce=setTimeout(()=>{state.books.search=inp.value.trim(); fetchBooks(1);},400);
+  });
+  fetchBooks(1);
 }
-
+function watchMoreBooks(){
+  if(bookObserver) bookObserver.disconnect();
+  const sentinel=$("#bk-sentinel");
+  if(!sentinel || state.books.loading || state.books.page>=state.books.totalPages) return;
+  bookObserver=new IntersectionObserver(entries=>{
+    if(entries.some(e=>e.isIntersecting) && !state.books.loading){
+      bookObserver.disconnect();
+      fetchBooks(state.books.page+1);
+    }
+  },{rootMargin:"300px"});
+  bookObserver.observe(sentinel);
+}
 async function fetchBooks(page){
-  const list=$("#bk-list"); if(list) list.innerHTML=`<div class="center-loader"><div class="spinner spinner-primary"></div></div>`;
+  if(page!==1 && state.books.loading) return;
+  const generation=page===1?++bookGeneration:bookGeneration;
+  if(page===1){state.books.items=[];state.books.page=0;state.books.totalPages=1;state.books.totalQuantity=0;}
+  state.books.loading=true;
+  paintBooks([],page===1);
+  const status=$("#bk-status"); if(status) status.textContent="Kitaplar yükleniyor…";
   try{
     const q=encodeURIComponent(state.books.search||"");
     const r=await api(`/api/schools/${encodeURIComponent(state.schoolCode)}/books?page=${page}&limit=30&search=${q}`);
+    if(generation!==bookGeneration) return;
+    if(!r.ok || r.data?.success===false) throw new Error(r.data?.message||"Kitap isteği başarısız");
     const d=r.data||{};
-    const items=(d.books)||d.data||[];
-    state.books.items=items;
-    state.books.page=(d.pagination&&d.pagination.page)||1;
-    state.books.totalPages=(d.pagination&&d.pagination.totalPages)||1;
-    state.books.totalQuantity=(d.summary&&d.summary.totalQuantity)||d.totalQuantity||0;
-  }catch(_){ state.books.items=[]; }
-  paintBooks();
+    const items=d.books||d.data||[];
+    if(!Array.isArray(items)) throw new Error("Invalid book response");
+    state.books.items=page===1?items:state.books.items.concat(items);
+    state.books.page=Number(d.pagination?.page)||page;
+    state.books.totalPages=items.length?(Number(d.pagination?.totalPages)||1):state.books.page;
+    state.books.totalQuantity=d.summary?.totalQuantity||d.totalQuantity||0;
+    state.books.loading=false;
+    paintBooks(items,page===1);
+    watchMoreBooks();
+  }catch(err){
+    if(generation!==bookGeneration) return;
+    state.books.loading=false;
+    const status=$("#bk-status");
+    if(status) status.textContent="Kitaplar yüklenemedi: "+(err.message||"Bağlantı hatası")+". Yeniden denemek için arama alanını kullanabilirsin.";
+  }
 }
-
-function paintBooks(){
-  const list=$("#bk-list"); if(!list) return;
-  const t=$("#bk-total"); if(t) t.textContent="Toplam: "+state.books.totalQuantity+" adet kitap";
-  const p=$("#bk-page"); if(p) p.textContent="Sayfa "+state.books.page+"/"+state.books.totalPages;
-  if(!state.books.items.length){ list.innerHTML=`<div class="empty">Kitap bulunamadı</div>`; return; }
-  let html=state.books.items.map(b=>{
+function paintBooks(items=[],reset=false){
+  const list=$("#bk-rows"); if(!list) return;
+  const t=$("#bk-total"); if(t) t.textContent="Toplam "+state.books.totalQuantity.toLocaleString("tr-TR")+" kitap";
+  const status=$("#bk-status");
+  if(status) status.textContent=state.books.loading?"Kitaplar yükleniyor…":(!state.books.items.length?"Kitap bulunamadı":(state.books.page>=state.books.totalPages?"Tüm kitaplar gösteriliyor":""));
+  let html=items.map(b=>{
     const title=b.title||b.book_name||"Bilinmeyen";
     const authors=Array.isArray(b.authors)?b.authors.join(", "):(b.authors||"");
     const publisher=b.publisher||"";
     const qty=b.quantity||0;
     const avail=(b.available_quantity!=null?b.available_quantity:(b.availableQuantity!=null?b.availableQuantity:0));
     return `<div class="book-row">
-      <div class="book-cover">${I.book}</div>
+      ${bookCover(b)}
       <div class="book-info">
         <div class="t">${esc(title)}</div>
         ${authors?`<div class="a">${esc(authors)}</div>`:""}
@@ -769,14 +825,8 @@ function paintBooks(){
       <div class="book-avail"><div class="n">${avail}/${qty}</div><div class="l">mevcut</div></div>
     </div>`;
   }).join("");
-  if(state.books.totalPages>1){
-    html+=`<div class="pager">
-      ${state.books.page>1?`<button data-pg="${state.books.page-1}">Önceki</button>`:""}
-      ${state.books.page<state.books.totalPages?`<button data-pg="${state.books.page+1}">Sonraki</button>`:""}
-    </div>`;
-  }
-  list.innerHTML=html;
-  list.querySelectorAll(".pager button").forEach(btn=>btn.addEventListener("click",()=>{fetchBooks(+btn.dataset.pg); list.scrollTop=0;}));
+  if(reset) list.innerHTML=html;
+  else list.insertAdjacentHTML("beforeend",html);
 }
 
 // ── RESERVATIONS ──
@@ -786,8 +836,13 @@ async function renderReservations(s){
     <div class="scroll-area" style="padding:16px" id="rz-list"><div class="center-loader"><div class="spinner spinner-primary"></div></div></div>`;
   try{
     const r=await api("/api/students/reservations",{auth:true});
-    state.reservations=(r.data&&r.data.success===true)?(r.data.data||[]):[];
-  }catch(_){ }
+    if(!r.ok || r.data?.success!==true || !Array.isArray(r.data.data)) throw new Error(r.data?.message||"Rezervasyon isteği başarısız");
+    state.reservations=r.data.data;
+  }catch(_){
+    const list=$("#rz-list");
+    if(list) list.innerHTML=`<div class="empty">Geçmiş yüklenemedi. Tekrar denemek için bu sekmeyi yeniden aç.</div>`;
+    return;
+  }
   const list=$("#rz-list"); if(!list) return;
   if(!state.reservations.length){ list.innerHTML=`<div class="empty">Henüz rezervasyon yok</div>`; return; }
   list.innerHTML=state.reservations.map(rzCard).join("");
@@ -811,7 +866,7 @@ function rzCard(r){
     const bg=d<0?"rgba(220,38,38,.08)":(d<=3?"rgba(245,158,11,.08)":"rgba(22,163,74,.08)");
     daysBadge=`<div style="margin-top:8px"><span class="badge" style="background:${bg};color:${c}">${d<0?Math.abs(d)+" gün gecikme!":d+" gün kaldı"}</span></div>`;
   }
-  return `<div class="rz">
+  return `<div class="rz">${bookCover(r,"history-cover")}<div class="history-copy">
     <div class="top">
       <span class="ic" style="background:${si.bg};color:${si.color}">${si.icon}</span>
       <span class="nm">${esc(r.book_name||"Bilinmeyen Kitap")}</span>
@@ -824,7 +879,7 @@ function rzCard(r){
       ${ret?`<span style="color:var(--success)">${I.returned}İade: ${esc(ret)}</span>`:""}
     </div>
     ${daysBadge}
-  </div>`;
+  </div></div>`;
 }
 
 // ── PROFILE ──
@@ -838,7 +893,7 @@ function renderProfile(s){
   const phone=u.phone||"";
   s.innerHTML=`
     <div class="sub-header"><div class="sh-top"><span class="sh-title">Profil</span>
-      <button class="back" id="prof-edit-toggle" style="margin-left:auto;color:var(--text-secondary)">${profEditing?'✕':I.edit}</button>
+      <button aria-label="Profili düzenle" class="back" id="prof-edit-toggle" style="margin-left:auto;color:var(--text-secondary)">${profEditing?'✕':I.edit}</button>
     </div></div>
     <div class="scroll-area" style="padding:0 20px 20px">
       <div class="prof-head">
