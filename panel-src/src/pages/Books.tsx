@@ -12,6 +12,7 @@ import { useAuthStore } from "@/store/authStore";
 import {
   getBookByIsbn,
   getSchoolBooks,
+  getSchoolBooksPage,
   addBookToSchool,
   updateSchoolBookQuantity,
   deleteSchoolBook,
@@ -26,7 +27,25 @@ const BarcodeScanner = lazy(() =>
   import("@/components/BarcodeScanner").then((m) => ({ default: m.BarcodeScanner }))
 );
 
-export function BooksPage() {
+const MAIN_CATEGORIES = ["Roman", "Hikâye", "Macera", "Bilim", "Tarih", "Diğer"] as const;
+type MainCategory = typeof MAIN_CATEGORIES[number];
+
+function categoryGroup(name: string): MainCategory {
+  const value = name.toLocaleLowerCase("tr-TR");
+  if (/roman|novel|fiction|kurgu/.test(value)) return "Roman";
+  if (/hik[aâ]ye|[oö]yk[uü]|story|stories|masal/.test(value)) return "Hikâye";
+  if (/macera|adventure|fantastik|fantasy|polisiye|gizem/.test(value)) return "Macera";
+  if (/bilim|science|teknoloji|technology|matematik|do[gğ]a|uzay/.test(value)) return "Bilim";
+  if (/tarih|history|biyografi|biography|k[üu]lt[üu]r/.test(value)) return "Tarih";
+  return "Diğer";
+}
+
+function bookTypes(book: SchoolBook): string[] {
+  return book.categories?.length ? book.categories : ["Tür belirtilmemiş"];
+}
+
+export function BooksPage({ statistics = false }: { statistics?: boolean }) {
+  const [page, setPage] = useState(1);
   const school = useAuthStore((s) => s.school);
   const schoolCode = school?.school_code || "";
   const queryClient = useQueryClient();
@@ -34,24 +53,49 @@ export function BooksPage() {
   const [search, setSearch] = useState("");
   const [isbnSearchOpen, setIsbnSearchOpen] = useState(false);
   const [detailBook, setDetailBook] = useState<SchoolBook | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<MainCategory | null>(null);
+  const [selectedType, setSelectedType] = useState<string | null>(null);
 
   const { data: books, isLoading } = useQuery({
     queryKey: ["school-books", schoolCode],
     queryFn: () => getSchoolBooks(schoolCode),
-    enabled: !!schoolCode,
+    enabled: !!schoolCode && statistics,
+  });
+
+  const { data: paged, isLoading: pageLoading, isError: pageError } = useQuery({
+    queryKey: ["school-books", schoolCode, "page", page, search],
+    queryFn: () => getSchoolBooksPage(schoolCode, page, search),
+    enabled: !!schoolCode && !statistics,
   });
 
   const filtered = useMemo(() => {
     if (!books) return [];
     const q = search.trim().toLocaleLowerCase("tr-TR");
-    if (!q) return books;
-    return books.filter(
-      (b) =>
+    return books.filter((b) =>
+      (!selectedCategory || bookTypes(b).some((type) => categoryGroup(type) === selectedCategory)) &&
+      (!selectedType || bookTypes(b).includes(selectedType)) && (!q || (
         (b.title || "").toLocaleLowerCase("tr-TR").includes(q) ||
         (b.authors || []).join(", ").toLocaleLowerCase("tr-TR").includes(q) ||
         String(b.isbn).includes(q)
+      ))
     );
-  }, [books, search]);
+  }, [books, search, selectedCategory, selectedType]);
+
+  const categories = useMemo(() => {
+    const groups = new Map<MainCategory, Map<string, Set<number>>>(MAIN_CATEGORIES.map((name) => [name, new Map()]));
+    (books || []).forEach((book) => {
+      bookTypes(book).forEach((type) => {
+        const types = groups.get(categoryGroup(type))!;
+        if (!types.has(type)) types.set(type, new Set());
+        types.get(type)!.add(book.book_id);
+      });
+    });
+    return MAIN_CATEGORIES.map((name) => ({
+      name,
+      types: [...groups.get(name)!].sort((a, b) => a[0].localeCompare(b[0], "tr-TR")),
+      count: new Set([...groups.get(name)!.values()].flatMap((ids) => [...ids])).size,
+    }));
+  }, [books]);
 
   const deleteMutation = useMutation({
     mutationFn: ({ bookId }: { bookId: number }) =>
@@ -64,14 +108,15 @@ export function BooksPage() {
   });
 
   async function handleExport() {
-    if (!filtered.length) {
+    const exportBooks = statistics ? filtered : (paged?.data || []);
+    if (!exportBooks.length) {
       toast.error("Dışa aktarılacak veri yok");
       return;
     }
     const saved = await exportToCsv(
       `kitaplar-${schoolCode}`,
       ["ISBN", "Kitap Adı", "Yazar", "Tür", "Yayınevi", "Raf", "Valilik Kitabı", "Sayfa", "Müsait", "Toplam"],
-      filtered.map((b) => [
+      exportBooks.map((b) => [
         b.isbn,
         b.title,
         (b.authors || []).join(", ") || "-",
@@ -215,8 +260,8 @@ export function BooksPage() {
   return (
     <div>
       <PageHeader
-        title="Kitaplar"
-        description={`Okul envanterinde ${filtered.length} kitap`}
+        title={statistics ? "Kitap İstatistikleri" : "Kitaplar"}
+        description="Okul kitaplığını keşfedin"
         actions={
           <>
             <Button variant="outline" onClick={handleExport}>
@@ -231,6 +276,29 @@ export function BooksPage() {
         }
       />
 
+      {statistics && <>
+      <div className="page-count-panel">Katalogda <strong>{books?.length ?? 0}</strong> kitap başlığı</div>
+
+      <div className="catalog-overview">
+        <div><span>Katalogdaki başlık</span><strong>{books?.length ?? 0}</strong><small>farklı kitap</small></div>
+        <div><span>Toplam kopya</span><strong>{books?.reduce((sum, book) => sum + (Number(book.quantity) || 0), 0) ?? 0}</strong><small>envanterde</small></div>
+        <div><span>Ödünç verilebilir</span><strong>{books?.reduce((sum, book) => sum + (Number(book.available_quantity) || 0), 0) ?? 0}</strong><small>hazır kitap</small></div>
+      </div>
+
+      <div className="book-category-grid" aria-label="Kitap kategorileri">
+        {categories.map(({ name, types, count }) => (
+          <div key={name} className={`book-category-shell ${selectedCategory === name ? "selected" : ""}`}>
+            <button type="button" className="book-category-card" aria-expanded={selectedCategory === name} onClick={() => { setSelectedCategory(selectedCategory === name ? null : name); setSelectedType(null); }}>
+              <BookOpen size={30} /><strong>{name}</strong><span>{count} kitap · {types.length} tür</span><small>{selectedCategory === name ? "Türleri kapat ↑" : "Türleri göster ↓"}</small>
+            </button>
+            <div className="book-type-collapse"><div className="book-type-inner">
+              {types.length ? types.map(([type, ids]) => <button type="button" key={type} className={`book-type-button ${selectedType === type ? "selected" : ""}`} onClick={() => setSelectedType(selectedType === type ? null : type)}>{type}<span>{ids.size}</span></button>) : <p>Bu kategoride kitap bulunmuyor.</p>}
+            </div></div>
+          </div>
+        ))}
+      </div>
+
+      </>}
       <div className="card p-4 mb-4">
         <div className="relative">
           <Search
@@ -240,21 +308,23 @@ export function BooksPage() {
           <Input
             placeholder="Kitap adı, yazar veya ISBN ara..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="pl-9"
           />
         </div>
       </div>
 
-      <DataTable
+      {pageError && <p role="alert">Kitaplar yüklenemedi. Lütfen tekrar deneyin.</p>}
+      {(!statistics || selectedType || search.trim()) && <DataTable
         columns={columns}
-        data={filtered}
-        loading={isLoading}
+        data={statistics ? filtered : (paged?.data || [])}
+        loading={statistics ? isLoading : pageLoading}
         emptyText="Envanterde kitap yok"
         getRowKey={(b) => b.book_id}
         onRowClick={(b) => setDetailBook(b)}
-      />
+      />}
 
+      {!statistics && <div className="book-pagination"><Button variant="outline" disabled={page <= 1 || pageLoading} onClick={() => setPage(page - 1)}>Önceki</Button><span>Sayfa {page} / {Math.max(1, paged?.pagination.totalPages || 1)} · {paged?.pagination.total || 0} kitap</span><Button variant="outline" disabled={pageLoading || !paged || page >= paged.pagination.totalPages} onClick={() => setPage(page + 1)}>Sonraki</Button></div>}
       <AddBookModal
         open={isbnSearchOpen}
         onClose={() => setIsbnSearchOpen(false)}

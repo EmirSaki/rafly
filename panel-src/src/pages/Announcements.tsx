@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Badge } from "@/components/Badge";
 import { useAuthStore } from "@/store/authStore";
 import { getStudents } from "@/api/students";
+import { getReservations } from "@/api/reservations";
 import {
   getAnnouncements,
   createAnnouncement,
@@ -51,6 +52,14 @@ export function AnnouncementsPage() {
   const queryClient = useQueryClient();
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [warningsOpen, setWarningsOpen] = useState(false);
+
+  const { data: loans = [] } = useQuery({
+    queryKey: ["reservations", schoolCode, "announcement-warnings"],
+    queryFn: () => getReservations({ schoolCode }),
+    enabled: !!schoolCode,
+  });
+  const overdueLoans = loans.filter((loan) => loan.status === "loaned" && loan.due_date && new Date(loan.due_date) < new Date());
 
   const { data: announcements = [], isLoading } = useQuery({
     queryKey: ["announcements", schoolCode],
@@ -91,6 +100,20 @@ export function AnnouncementsPage() {
           </Button>
         }
       />
+
+      <div className="announcement-overview">
+        <div><span>Aktif bilgilendirme</span><strong>{activeAnnouncements.length}</strong><small>Şu anda görüntüleniyor</small></div>
+        <div><span>Geçmiş bilgilendirme</span><strong>{pastAnnouncements.length}</strong><small>Arşivdeki duyurular</small></div>
+      </div>
+
+      <button type="button" className="card p-5 mb-4 w-full text-left" onClick={() => setWarningsOpen((open) => !open)} aria-expanded={warningsOpen}>
+        <strong>Kitap iade uyarıları</strong> <span className="text-muted-foreground">({overdueLoans.length}) · {warningsOpen ? "Kapat" : "Göster"}</span>
+      </button>
+      {warningsOpen && <div className="card p-5 mb-5 space-y-3" aria-label="Kitap iade uyarıları">
+        {overdueLoans.length ? overdueLoans.map((loan) => <div key={loan.reservation_id} className="border-b pb-3 last:border-0">
+          <strong>{loan.student_name}</strong> · {loan.class_name} · {loan.book_name}<p className="text-sm text-muted-foreground">Son iade: {formatDate(loan.due_date)}</p>
+        </div>) : <p className="text-sm text-muted-foreground">Geciken kitap bulunmuyor.</p>}
+      </div>}
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Yükleniyor...</p>

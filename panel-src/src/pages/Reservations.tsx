@@ -4,7 +4,6 @@ import { Check, X, Undo2, Search, Download } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
-import { Select } from "@/components/Select";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable, Column } from "@/components/DataTable";
 import { Badge } from "@/components/Badge";
@@ -18,15 +17,6 @@ import {
 import { getErrorMessage } from "@/api/client";
 import { formatDate, exportToCsv } from "@/lib/utils";
 import type { Reservation, ReservationStatus } from "@/types";
-
-const STATUS_OPTIONS: Array<{ value: ReservationStatus | ""; label: string }> = [
-  { value: "", label: "Tüm durumlar" },
-  { value: "pending_approval", label: "Onay bekliyor" },
-  { value: "loaned", label: "Ödünç verildi" },
-  { value: "return_requested", label: "İade talebi" },
-  { value: "returned", label: "İade edildi" },
-  { value: "rejected", label: "Reddedildi" },
-];
 
 const STATUS_LABEL: Record<string, string> = {
   pending_approval: "Onay bekliyor",
@@ -76,7 +66,7 @@ export function ReservationsPage() {
     let result = reservations.filter((r) => {
       if (seen.has(r.reservation_id)) return false;
       seen.add(r.reservation_id);
-      return true;
+      return r.status === "loaned" || r.status === "returned";
     });
 
     if (statusFilter) {
@@ -252,7 +242,7 @@ export function ReservationsPage() {
     <div>
       <PageHeader
         title="Rezervasyonlar"
-        description={`Toplam ${filtered.length} kayıt`}
+        description="Ödünç ve iade kayıtları"
         actions={
           <Button variant="outline" onClick={handleExport}>
             <Download size={16} />
@@ -261,7 +251,20 @@ export function ReservationsPage() {
         }
       />
 
-      <div className="card p-4 mb-4 flex flex-col sm:flex-row gap-3">
+      <div className="page-count-panel">Toplam <strong>{reservations?.length ?? 0}</strong> kayıt</div>
+
+      <div className="reservation-overview" aria-label="Rezervasyon durumu">
+        {[
+          { key: "loaned" as const, label: "Ödünç Verildi", tone: "blue" },
+          { key: "returned" as const, label: "İade Edildi", tone: "green" },
+        ].map(({ key, label, tone }) => (
+          <button type="button" key={key} className={`reservation-overview-card tone-${tone} ${statusFilter === key ? "selected" : ""}`} onClick={() => setStatusFilter(statusFilter === key ? "" : key)}>
+            <span>{label}</span><strong>{reservations?.filter((item) => item.status === key).length ?? 0}</strong><small>{statusFilter === key ? "Filtreyi kaldır" : "Kayıtları göster"}</small>
+          </button>
+        ))}
+      </div>
+
+      {statusFilter && <div className="card p-4 mb-4 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search
             size={16}
@@ -273,20 +276,6 @@ export function ReservationsPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
-        </div>
-        <div className="w-full sm:w-56">
-          <Select
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as ReservationStatus | "")
-            }
-          >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
-              </option>
-            ))}
-          </Select>
         </div>
         <div className="w-full sm:w-40">
           <Input
@@ -317,15 +306,15 @@ export function ReservationsPage() {
             Tarihi Temizle
           </Button>
         )}
-      </div>
+      </div>}
 
-      <DataTable
+      {statusFilter && <DataTable
         columns={columns}
         data={filtered}
         loading={isLoading}
         emptyText="Rezervasyon bulunmuyor"
         getRowKey={(r) => r.reservation_id}
-      />
+      />}
     </div>
   );
 }

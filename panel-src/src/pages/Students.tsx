@@ -1,6 +1,6 @@
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Upload, Search, Download, User, Hash, GraduationCap, Layers, Mail, Phone, KeyRound, AlertTriangle, Trash2 } from "lucide-react";
+import { Plus, Upload, Search, Download, User, Hash, GraduationCap, Layers, Mail, Phone, KeyRound, AlertTriangle, Trash2, ChevronDown, Users, Send } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -48,6 +48,9 @@ export function StudentsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [promotionOpen, setPromotionOpen] = useState(false);
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
+  const [expandedClasses, setExpandedClasses] = useState<string[]>([]);
+  const [staffOpen, setStaffOpen] = useState(false);
+  const [showAllOverdue, setShowAllOverdue] = useState(false);
 
   const showArchived = levelFilter === ARCHIVED_FILTER;
 
@@ -112,6 +115,52 @@ export function StudentsPage() {
         (s.class_name || "").toLocaleLowerCase("tr-TR").includes(q)
     );
   }, [students, search]);
+
+  const classGroups = useMemo(() => {
+    const groups = new Map<string, Student[]>();
+    for (const student of filtered) {
+      const name = student.class_name?.trim() || "Sınıfı Belirtilmemiş";
+      groups.set(name, [...(groups.get(name) || []), student]);
+    }
+    return [...groups.entries()]
+      .sort(([a], [b]) => a.localeCompare(b, "tr-TR", { numeric: true }))
+      .map(([name, members]) => ({
+        name,
+        members: members.sort((a, b) =>
+          String(a.student_number || "").localeCompare(String(b.student_number || ""), "tr-TR", { numeric: true })
+        ),
+      }));
+  }, [filtered]);
+
+  const overdueStudents = useMemo(
+    () => filtered.filter((student) => overdueMap.has(student.student_number)),
+    [filtered, overdueMap]
+  );
+
+  const administrators = useMemo(
+    () => filtered.filter((student) => (student.class_name || "").toLocaleLowerCase("tr-TR").includes("idareci")),
+    [filtered]
+  );
+
+  const directorySections = useMemo(() => {
+    const sections = new Map<string, typeof classGroups>();
+    for (const group of classGroups) {
+      if (group.name.toLocaleLowerCase("tr-TR").includes("idareci")) continue;
+      const grade = group.name.match(/^(\d+)/)?.[1];
+      const normalized = group.name.toLocaleLowerCase("tr-TR");
+      const title = grade ? `${grade}. Sınıf` : normalized.includes("hazırlık") ? "Hazırlık" : "Diğer Kayıtlar";
+      sections.set(title, [...(sections.get(title) || []), group]);
+    }
+    return [...sections.entries()].sort(([a], [b]) => {
+      if (a === "Diğer Kayıtlar") return 1;
+      if (b === "Diğer Kayıtlar") return -1;
+      return a.localeCompare(b, "tr-TR", { numeric: true });
+    });
+  }, [classGroups]);
+
+  function toggleClass(name: string) {
+    setExpandedClasses((current) => current.includes(name) ? current.filter((item) => item !== name) : [...current, name]);
+  }
 
   const importMutation = useMutation({
     mutationFn: (file: File) => importStudentsFromExcel(schoolCode, file),
@@ -264,7 +313,7 @@ export function StudentsPage() {
         }
       />
 
-      <div className="card p-4 mb-4 flex flex-col sm:flex-row gap-3">
+      <div className="student-search-band card p-4 mb-4 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search
             size={16}
@@ -291,7 +340,65 @@ export function StudentsPage() {
         </div>
       </div>
 
-      <DataTable
+      {!showArchived && (administrators.length > 0 || overdueStudents.length > 0) && (
+        <div className="student-feature-grid">
+          <section className="student-staff-card" aria-label="İdareciler">
+            <button type="button" className="feature-card-heading" onClick={() => setStaffOpen(!staffOpen)} aria-expanded={staffOpen}>
+              <span className="feature-icon"><Users size={22} /></span><strong>İdareciler</strong><ChevronDown size={20} className={staffOpen ? "rotate-180" : ""} />
+            </button>
+            {staffOpen || search ? <div className="feature-staff-list">{administrators.length ? administrators.map((student) => <button type="button" key={student.student_number} onClick={() => setDetailStudent(student)}><span>{student.student_number}</span>{student.full_name}</button>) : <p>Eşleşen kayıt yok.</p>}</div> : <button type="button" className="feature-show" onClick={() => setStaffOpen(true)}>☰ &nbsp; Kayıtları göster <span>{administrators.length}</span></button>}
+          </section>
+          <section className="student-overdue-card" aria-label="Gecikme uyarıları">
+            <button type="button" className="feature-card-heading overdue-heading" onClick={() => setShowAllOverdue(!showAllOverdue)} aria-expanded={showAllOverdue}>
+              <span className="feature-icon"><AlertTriangle size={21} /></span><strong>Uyarı Gönderilecekler</strong><span className="overdue-total">{overdueStudents.length}</span><ChevronDown size={20} className={showAllOverdue ? "rotate-180" : ""} />
+            </button>
+            <div className={`student-overdue-list ${showAllOverdue ? "all-overdue" : ""}`}>
+            {(showAllOverdue ? overdueStudents : overdueStudents.slice(0, 2)).map((student) => (
+              <div key={`${student.student_number}-${student.class_name}`}>
+                <span className="student-number">{student.student_number}</span>
+                <strong>{student.full_name}</strong>
+                <span>{student.class_name || "—"}</span>
+                <button type="button" onClick={() => warnMut.mutate(student)} disabled={warnMut.isPending}><Send size={14} /> Uyarı Gönder</button>
+              </div>
+            ))}
+            {overdueStudents.length === 0 && <p>Gecikmiş iade bulunmuyor.</p>}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {!showArchived && !isLoading && classGroups.length > 0 && (
+        <div className="student-directory">
+          {directorySections.map(([sectionTitle, groups]) => <div className="directory-section" key={sectionTitle}>
+            <h2>{sectionTitle}</h2>
+            <div className="class-directory">{groups.map(({ name, members }) => {
+            const open = !!search || expandedClasses.includes(name);
+            return (
+              <section className="class-section" key={name}>
+                <button type="button" className="class-tile" onClick={() => toggleClass(name)} aria-expanded={open}>
+                  <span className="class-icon"><Users size={20} /></span>
+                  <span className="class-tile-copy"><span className="class-tile-name">{name}</span><span className="class-count">{members.length} kayıt</span></span>
+                  <ChevronDown size={18} className={open ? "rotate-180" : ""} />
+                </button>
+                {open && (
+                  <div className="class-members">
+                    {members.map((student) => (
+                      <div className="class-member" key={`${student.student_number}-${student.class_name}`}>
+                        <span className="student-number">{student.student_number}</span>
+                        <button type="button" className="student-name-link" onClick={() => setDetailStudent(student)}>{student.full_name}</button>
+                        {overdueMap.has(student.student_number) && <span className="student-overdue-label">İadesi gecikti</span>}
+                        <button type="button" className="student-detail-link" onClick={() => setDetailStudent(student)}>Detay</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            );
+          })}</div></div>)}
+        </div>
+      )}
+
+      {(showArchived || isLoading || classGroups.length === 0) && <DataTable
         columns={columns}
         data={filtered}
         loading={isLoading}
@@ -302,7 +409,7 @@ export function StudentsPage() {
         }
         getRowKey={(s) => `${s.student_number}-${s.class_name}`}
         onRowClick={(s) => setDetailStudent(s)}
-      />
+      />}
 
       <AddStudentModal
         open={addOpen}

@@ -1,6 +1,6 @@
 import { FormEvent, Suspense, lazy, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Zap, ScanLine } from "lucide-react";
+import { BookOpen, ScanLine, Info } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -63,93 +63,30 @@ export function QuickLoanPage() {
   return (
     <div>
       <PageHeader
-        title="Hızlı Ödünç Ver"
-        description="Öğrenci numarası ve ISBN ile tek tıkla ödünç verme"
+        title="Hızlı Ödünç"
+        description="Öğrenciye kitap ödünç vermek için gerekli bilgileri girin."
       />
 
-      <div className="card p-6 max-w-2xl">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg">
-            <Zap size={20} />
-          </div>
-          <div>
-            <h2 className="font-semibold">Yeni Ödünç İşlemi</h2>
-            <p className="text-sm text-muted-foreground">
-              Barkod okuyucu varsa direkt ISBN alanına okutabilirsin
-            </p>
-          </div>
+      <form onSubmit={handleSubmit} className="quick-loan-form card">
+        <div className="quick-loan-top-grid">
+          <section className="quick-loan-step step-blue">
+            <div className="quick-loan-step-heading"><span>1</span><div><h2>Öğrenci Numarası</h2><p>Ödünç vereceğiniz öğrencinin numarasını girin.</p></div></div>
+            <Input label="Öğrenci numarası" placeholder="Öğrenci numarası" value={studentNumber} onChange={(e) => setStudentNumber(e.target.value)} autoFocus />
+          </section>
+          <section className="quick-loan-step step-amber">
+            <div className="quick-loan-step-heading"><span>2</span><div><h2>Kitap ISBN</h2><p>ISBN numarasını girin veya barkodu okutun.</p></div></div>
+            <div className="quick-isbn"><Input label="ISBN numarası" placeholder="ISBN numarası" value={isbn} onChange={(e) => setIsbn(e.target.value)} /><button type="button" onClick={() => setScanOpen(true)}><ScanLine size={18} /> Barkod Okut</button></div>
+          </section>
         </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Öğrenci Numarası"
-            placeholder="Örn: 12345"
-            value={studentNumber}
-            onChange={(e) => setStudentNumber(e.target.value)}
-            autoFocus
-          />
-
-          <div className="relative">
-            <Input
-              label="Kitap ISBN"
-              placeholder="ISBN gir veya barkod tara..."
-              value={isbn}
-              onChange={(e) => setIsbn(e.target.value)}
-              className="pr-12"
-            />
-            <button
-              type="button"
-              onClick={() => setScanOpen(true)}
-              title="Kamera ile barkod tara"
-              aria-label="Kamera ile barkod tara"
-              className="absolute right-1.5 top-[26px] flex items-center justify-center rounded-md p-2 text-primary hover:bg-primary/10 transition-colors"
-            >
-              <ScanLine size={20} />
-            </button>
+        <section className="quick-loan-step step-neutral">
+          <div className="quick-loan-step-heading"><span>3</span><div><h2>Okul Seviyesi ve Son İade Tarihi</h2></div></div>
+          <div className="quick-loan-fields">
+            <Select label="Okul Seviyesi (opsiyonel)" value={schoolLevel} onChange={(e) => setSchoolLevel(e.target.value)}><option value="">Seçiniz</option><option value="ilkokul">İlkokul</option><option value="ortaokul">Ortaokul</option><option value="lise">Lise</option><option value="hazırlık">Hazırlık</option></Select>
+            <Input label="Son İade Tarihi" type="date" value={dueDate || defaultDueDate} onChange={(e) => setDueDate(e.target.value)} />
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Select
-              label="Okul Seviyesi (opsiyonel)"
-              value={schoolLevel}
-              onChange={(e) => setSchoolLevel(e.target.value)}
-            >
-              <option value="">Belirtilmedi</option>
-              <option value="ilkokul">İlkokul</option>
-              <option value="ortaokul">Ortaokul</option>
-              <option value="lise">Lise</option>
-              <option value="hazırlık">Hazırlık</option>
-            </Select>
-            <Input
-              label="Son İade Tarihi"
-              type="date"
-              value={dueDate || defaultDueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-            />
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button
-              type="submit"
-              size="lg"
-              loading={mutation.isPending}
-              className="min-w-[160px]"
-            >
-              <Zap size={16} />
-              Ödünç Ver
-            </Button>
-          </div>
-        </form>
-
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-md">
-          <p className="text-xs text-blue-900">
-            <strong>İpucu:</strong> Bu ekran kütüphane kasası için optimize
-            edilmiştir. Öğrenci numarasını ve kitabın ISBN'ini girdiğinde
-            arkada öğrenci doğrulanır, kitap envanterden düşülür ve ödünç kaydı
-            açılır.
-          </p>
-        </div>
-      </div>
+        </section>
+        <div className="quick-loan-footer"><p><Info size={18} /> Öğrenci numarası ve ISBN girerek ödünç işlemini tamamlayın.</p><Button type="submit" size="lg" loading={mutation.isPending}><BookOpen size={18} /> Ödünç Ver</Button></div>
+      </form>
 
       {scanOpen && (
         <Suspense fallback={null}>
