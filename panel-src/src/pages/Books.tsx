@@ -122,7 +122,7 @@ export function BooksPage({ statistics = false }: { statistics?: boolean }) {
         (b.authors || []).join(", ") || "-",
         (b.categories || []).join(", ") || "-",
         b.publisher || "-",
-        (b.shelf || "").trim() || "-",
+        b.shelves?.length ? b.shelves.join(", ") : (b.shelf || "").trim() || "-",
         b.is_valilik_book ? "Evet" : "Hayır",
         String(b.page_count || 0),
         String(b.available_quantity),
@@ -448,6 +448,10 @@ function BookDetailForm({
   const [publisher, setPublisher] = useState(book.publisher || "");
   const [categories, setCategories] = useState((book.categories || []).join(", "));
   const [pageCount, setPageCount] = useState(book.page_count || 0);
+  const [shelves, setShelves] = useState(
+    (book.shelves?.length ? book.shelves : [book.shelf || ""])
+      .filter(Boolean).join(", ")
+  );
   const [isValilik, setIsValilik] = useState(Boolean(book.is_valilik_book));
 
   const mutation = useMutation({
@@ -461,6 +465,7 @@ function BookDetailForm({
         categories: categories.split(",").map((c) => c.trim()).filter(Boolean),
         page_count: pageCount,
         is_valilik_book: isValilik,
+        shelves: [...new Set(shelves.split(",").map((s) => s.trim()).filter(Boolean))],
       };
       return updateSchoolBookQuantity(schoolCode, book.book_id, payload);
     },
@@ -509,6 +514,12 @@ function BookDetailForm({
               {book.available_quantity} / {book.quantity} müsait
             </Badge>
           </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Raf Konumu</p>
+            <p className="text-sm bg-muted/50 rounded px-2 py-1.5">
+              {shelves || "Belirtilmemiş"}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -522,6 +533,12 @@ function BookDetailForm({
         placeholder="Virgülle ayırarak yazın"
         value={authors}
         onChange={(e) => setAuthors(e.target.value)}
+      />
+      <Input
+        label="Raflar"
+        placeholder="Birden fazla rafı virgülle ayırın"
+        value={shelves}
+        onChange={(e) => setShelves(e.target.value)}
       />
       <div className="grid grid-cols-2 gap-3">
         <Input
@@ -878,3 +895,4 @@ function AddBookModal({ open, onClose, schoolCode, onAdded }: AddBookModalProps)
     </Modal>
   );
 }
+
