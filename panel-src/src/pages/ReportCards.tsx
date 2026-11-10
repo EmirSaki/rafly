@@ -203,14 +203,19 @@ export function ReportCardsPage() {
     <div>
       <PageHeader
         title="Karne Oluştur"
-        description="Öğrencilerin okuma karnelerini PDF olarak indir"
+        description="Okuma yolculuğunu düzenli bir karneye dönüştür"
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="report-studio-hero">
+        <div><span className="report-studio-eyebrow"><Award size={17} /> RAFly KARNE STÜDYOSU</span><h2>Her okuma yolculuğu<br />bir karneyi hak eder.</h2><p>Öğrencileri seç, dönemi belirle ve karneleri tek adımda hazırla.</p></div>
+        <div className="report-studio-hero-count"><strong>{isLoading ? "…" : selected.length}</strong><span>karneye hazır öğrenci</span></div>
+      </div>
+
+      <div className="report-studio-layout grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Sol: filtreler */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="card p-5">
-            <h2 className="font-semibold mb-1">Kimlerin karnesi basılsın?</h2>
+          <div className="card report-step-card p-5">
+            <div className="report-step-number">01</div><h2 className="font-semibold mb-1">Kimlerin karnesi basılsın?</h2>
             <p className="text-sm text-muted-foreground mb-4">
               Boş bırakılan filtreler tüm kayıtları kapsar.
             </p>
@@ -265,8 +270,8 @@ export function ReportCardsPage() {
             </div>
           </div>
 
-          <div className="card p-5">
-            <h2 className="font-semibold mb-1">Hangi tarih aralığı?</h2>
+          <div className="card report-step-card p-5">
+            <div className="report-step-number">02</div><h2 className="font-semibold mb-1">Hangi tarih aralığı?</h2>
             <p className="text-sm text-muted-foreground mb-4">
               Yalnızca bu aralıkta <b>iade edilmiş</b> kitaplar sayılır ve
               sıralamalar da bu aralığa göre hesaplanır. Boş bırakırsan tüm
@@ -284,7 +289,7 @@ export function ReportCardsPage() {
                   key={p.key}
                   type="button"
                   onClick={() => applyPreset(p.key)}
-                  className="px-3 py-1.5 text-xs rounded-md border hover:bg-muted/40 transition-colors"
+                  className="report-period-chip px-3 py-1.5 text-xs rounded-md border hover:bg-muted/40 transition-colors"
                 >
                   {p.label}
                 </button>
@@ -340,15 +345,15 @@ export function ReportCardsPage() {
             </div>
           </div>
 
-          <div className="card p-5">
-            <h2 className="font-semibold mb-3">Çıktı biçimi</h2>
+          <div className="card report-step-card p-5">
+            <div className="report-step-number">03</div><h2 className="font-semibold mb-3">Çıktı biçimi</h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setFormat("zip")}
                 className={
-                  "text-left p-4 rounded-lg border-2 transition-colors " +
+                  "report-format-card text-left p-4 rounded-lg border-2 transition-colors " +
                   (format === "zip"
                     ? "border-primary bg-primary/5"
                     : "border-border hover:bg-muted/30")
@@ -368,7 +373,7 @@ export function ReportCardsPage() {
                 type="button"
                 onClick={() => setFormat("pdf")}
                 className={
-                  "text-left p-4 rounded-lg border-2 transition-colors " +
+                  "report-format-card text-left p-4 rounded-lg border-2 transition-colors " +
                   (format === "pdf"
                     ? "border-primary bg-primary/5"
                     : "border-border hover:bg-muted/30")
@@ -386,7 +391,7 @@ export function ReportCardsPage() {
             </div>
           </div>
 
-          <div className="card p-5">
+          <div className="card report-includes-card p-5">
             <h2 className="font-semibold mb-2">Karnede ne yazıyor?</h2>
             <ul className="text-sm text-muted-foreground space-y-1.5 list-disc pl-5">
               <li>Ad soyad, okul numarası, sınıf ve seviye</li>
@@ -407,7 +412,7 @@ export function ReportCardsPage() {
 
         {/* Sağ: özet + indir */}
         <div className="space-y-4">
-          <div className="card p-5">
+          <div className="card report-summary-card p-5">
             <div className="flex items-center gap-2 mb-4">
               <Award size={18} className="text-primary" />
               <h2 className="font-semibold">Özet</h2>
@@ -471,7 +476,7 @@ export function ReportCardsPage() {
             )}
           </div>
 
-          <div className="card p-5">
+          <div className="card report-class-card p-5">
             <div className="flex items-center gap-2 mb-2">
               <UsersIcon size={16} className="text-muted-foreground" />
               <h3 className="text-sm font-medium">Seçilen sınıflar</h3>

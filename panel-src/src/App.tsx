@@ -26,6 +26,7 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="/students" element={<StudentsPage />} />
         <Route path="/books" element={<BooksPage />} />
+        <Route path="/book-stats" element={<BooksPage statistics />} />
         <Route path="/reservations" element={<ReservationsPage />} />
         <Route path="/quick-loan" element={<QuickLoanPage />} />
         <Route path="/reading-stats" element={<ReadingStatsPage />} />

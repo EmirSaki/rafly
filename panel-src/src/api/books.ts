@@ -78,6 +78,7 @@ export interface UpdateSchoolBookPayload {
   categories?: string[];
   page_count?: number;
   is_valilik_book?: boolean;
+  shelves?: string[];
 }
 
 export async function updateSchoolBookQuantity(
@@ -98,3 +99,9 @@ export async function deleteSchoolBook(schoolCode: string, bookId: number) {
   );
   return data;
 }
+
+export async function getSchoolBooksPage(schoolCode: string, page: number, search: string) {
+ const { data } = await apiClient.get<{ data: SchoolBook[]; pagination: { total: number; totalPages: number } }>(`/api/schools/${encodeURIComponent(schoolCode)}/books`, { params: { page, limit: 20, search } });
+ return data;
+}
+

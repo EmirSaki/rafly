@@ -1,11 +1,9 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, TrendingUp, Users as UsersIcon, Trophy } from "lucide-react";
+import { BookOpen, TrendingUp, Users as UsersIcon, Trophy, SlidersHorizontal, ChevronDown, Layers3 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable, Column } from "@/components/DataTable";
 import { Badge } from "@/components/Badge";
-import { Select } from "@/components/Select";
-import { Input } from "@/components/Input";
 import { useAuthStore } from "@/store/authStore";
 import { getReservations } from "@/api/reservations";
 import { cn, formatDate } from "@/lib/utils";
@@ -33,6 +31,31 @@ function extractGrade(className?: string): string | null {
   if (!className) return null;
   const match = String(className).match(/^(\d+)/);
   return match ? match[1] : null;
+}
+
+const classNameCollator = new Intl.Collator("tr", { numeric: true, sensitivity: "base" });
+
+function compareClassNames(a: string, b: string): number {
+  const aGrade = extractGrade(a);
+  const bGrade = extractGrade(b);
+  if (aGrade && bGrade && aGrade !== bGrade) return Number(aGrade) - Number(bGrade);
+  if (aGrade && !bGrade) return -1;
+  if (!aGrade && bGrade) return 1;
+  return classNameCollator.compare(a, b);
+}
+
+function DownwardFilter({ label, value, options, onChange }: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  return <details className="reading-filter-select">
+    <summary><span><small>{label}</small><strong>{options.find((option) => option.value === value)?.label || options[0]?.label}</strong></span><ChevronDown size={17} /></summary>
+    <div className="reading-filter-options" role="listbox" aria-label={label}>
+      {options.map((option) => <button type="button" role="option" aria-selected={option.value === value} key={option.value} onClick={(event) => { onChange(option.value); event.currentTarget.closest("details")?.removeAttribute("open"); }}>{option.label}</button>)}
+    </div>
+  </details>;
 }
 
 function MiniStatCard({
@@ -74,6 +97,9 @@ export function ReadingStatsPage() {
   const [levelFilter, setLevelFilter] = useState("");
   const [gradeFilter, setGradeFilter] = useState("");
   const [classFilter, setClassFilter] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [classSort, setClassSort] = useState<"class" | "books">("class");
+  const [selectedStudent, setSelectedStudent] = useState<StudentStat | null>(null);
 
   // Backend'den status=returned olan tüm kayıtları çek
   const { data: reservations, isLoading } = useQuery({
@@ -97,7 +123,7 @@ export function ReadingStatsPage() {
       availableGrades: Array.from(grades).sort(
         (a, b) => Number(a) - Number(b)
       ),
-      availableClasses: Array.from(classes).sort(),
+      availableClasses: Array.from(classes).sort(compareClassNames),
     };
   }, [reservations, levelFilter]);
 
@@ -170,8 +196,10 @@ export function ReadingStatsPage() {
         count: c.count,
         studentCount: c.students.size,
       }))
-      .sort((a, b) => b.count - a.count);
-  }, [filtered]);
+      .sort((a, b) => classSort === "books"
+        ? b.count - a.count || compareClassNames(a.class_name, b.class_name)
+        : compareClassNames(a.class_name, b.class_name));
+  }, [filtered, classSort]);
 
   const totalBooks = filtered.length;
   const totalStudents = studentStats.length;
@@ -255,57 +283,39 @@ export function ReadingStatsPage() {
       />
 
       {/* Filtreler */}
-      <div className="card p-4 mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <Select
+      <section className="reading-filter-panel mb-4">
+        <button type="button" className="reading-filter-toggle" onClick={() => setFiltersOpen((open) => !open)} aria-expanded={filtersOpen}>
+          <span><SlidersHorizontal size={20} /><strong>Filtreler</strong><small>{levelFilter || gradeFilter || classFilter ? "Seçilen sınıf ve seviyeyi düzenle" : "Seviye, sınıf ve şube seç"}</small></span><ChevronDown size={20} />
+        </button>
+        {filtersOpen && <div className="reading-filter-body"><div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <DownwardFilter
             label="Okul Seviyesi"
             value={levelFilter}
-            onChange={(e) => {
-              setLevelFilter(e.target.value);
+            onChange={(value) => {
+              setLevelFilter(value);
               // Seviye değişince diğer filtreleri sıfırla
               setGradeFilter("");
               setClassFilter("");
             }}
-          >
-            {SCHOOL_LEVELS.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
-              </option>
-            ))}
-          </Select>
+            options={SCHOOL_LEVELS}
+          />
 
-          <Select
+          <DownwardFilter
             label="Sınıf"
             value={gradeFilter}
-            onChange={(e) => {
-              setGradeFilter(e.target.value);
+            onChange={(value) => {
+              setGradeFilter(value);
               setClassFilter("");
             }}
-          >
-            <option value="">Tüm sınıflar</option>
-            {availableGrades.map((g) => (
-              <option key={g} value={g}>
-                {g}. Sınıf
-              </option>
-            ))}
-          </Select>
+            options={[{ value: "", label: "Tüm sınıflar" }, ...availableGrades.map((g) => ({ value: g, label: `${g}. Sınıf` }))]}
+          />
 
-          <Select
+          <DownwardFilter
             label="Şube"
             value={classFilter}
-            onChange={(e) => setClassFilter(e.target.value)}
-          >
-            <option value="">Tüm şubeler</option>
-            {availableClasses
-              .filter((c) =>
-                gradeFilter ? extractGrade(c) === gradeFilter : true
-              )
-              .map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-          </Select>
+            onChange={setClassFilter}
+            options={[{ value: "", label: "Tüm şubeler" }, ...availableClasses.filter((c) => gradeFilter ? extractGrade(c) === gradeFilter : true).map((c) => ({ value: c, label: c }))]}
+          />
 
           <div className="flex items-end">
             <button
@@ -327,7 +337,8 @@ export function ReadingStatsPage() {
             {classFilter && <Badge variant="neutral">{classFilter}</Badge>}
           </div>
         )}
-      </div>
+      </div>}
+      </section>
 
       {/* İstatistik kartları */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
@@ -357,22 +368,37 @@ export function ReadingStatsPage() {
         />
       </div>
 
+      <div className="reading-podium" aria-label="En çok okuyan öğrenciler">
+        {[2, 0, 1].map((index) => {
+          const student = studentStats[index];
+          return student && <div key={`${student.student_number}-${student.class_name}`} className={`podium-place podium-${index + 1}`}>
+            <span className="podium-medal">{["🥇", "🥈", "🥉"][index]}</span>
+            <strong>{student.student_name}</strong><small>{student.class_name} · {student.count} kitap</small>
+          </div>;
+        })}
+      </div>
+
       {/* Sınıf bazlı özet (sadece sınıf seçili değilken) */}
       {!classFilter && classStats.length > 1 && (
-        <div className="card p-5 mb-4">
-          <h2 className="font-semibold mb-3">Sınıf Bazında Okuma</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-            {classStats.map((c) => (
+        <div className="reading-classes-section mb-4">
+          <div className="reading-classes-header">
+            <h2><Layers3 size={21} /> Sınıf Bazında Okuma</h2>
+            <div className="reading-class-sort" role="group" aria-label="Sınıf kartlarını sırala">
+              <button type="button" aria-pressed={classSort === "class"} onClick={() => setClassSort("class")}>Sınıf bazında</button>
+              <button type="button" aria-pressed={classSort === "books"} onClick={() => setClassSort("books")}>Kitap bazında</button>
+            </div>
+          </div>
+          <div className="reading-class-grid">
+            {classStats.map((c, index) => (
               <button
                 key={c.class_name}
                 onClick={() => setClassFilter(c.class_name)}
-                className="text-left p-3 rounded-md border hover:bg-muted/30 transition-colors"
+                className={`reading-class-card reading-class-tone-${index % 5}`}
               >
-                <p className="text-xs text-muted-foreground">{c.class_name}</p>
-                <p className="text-xl font-bold">{c.count}</p>
-                <p className="text-[10px] text-muted-foreground">
-                  {c.studentCount} öğrenci
-                </p>
+                <span className="reading-class-symbol"><BookOpen size={19} /></span>
+                <strong>{c.class_name}</strong>
+                <span className="reading-class-count">{c.count} <small>kitap</small></span>
+                <span className="reading-class-students">{c.studentCount} öğrenci <ChevronDown size={14} /></span>
               </button>
             ))}
           </div>
@@ -380,6 +406,7 @@ export function ReadingStatsPage() {
       )}
 
       {/* Öğrenci sıralaması */}
+      {classFilter && <>
       <div className="mb-2 flex items-center justify-between">
         <h2 className="font-semibold">Öğrenci Sıralaması</h2>
         <span className="text-xs text-muted-foreground">
@@ -393,7 +420,16 @@ export function ReadingStatsPage() {
         loading={isLoading}
         emptyText="Bu filtreler için iade edilmiş kitap kaydı bulunamadı"
         getRowKey={(s) => `${s.student_number}-${s.class_name}`}
+        onRowClick={setSelectedStudent}
       />
+      {selectedStudent && <div className="card p-5 mt-4" role="dialog" aria-label="Öğrencinin okuduğu kitaplar">
+        <button type="button" className="float-right" onClick={() => setSelectedStudent(null)}>Kapat</button>
+        <h3 className="font-semibold mb-3">{selectedStudent.student_name} · Okuduğu kitaplar</h3>
+        {filtered.filter((r) => r.student_number === selectedStudent.student_number && r.class_name === selectedStudent.class_name).map((r) =>
+          <p key={r.reservation_id} className="border-t py-2">{r.book_name} <span className="text-muted-foreground">· {formatDate(r.returned_at)}</span></p>
+        )}
+      </div>}
+      </>}
     </div>
   );
 }

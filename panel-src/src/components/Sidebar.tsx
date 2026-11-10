@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -13,6 +13,7 @@ import {
   Trash2,
   Award,
   X,
+  BookMarked,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuthStore } from "@/store/authStore";
@@ -39,6 +40,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const { user, school, logout } = useAuthStore();
   const { logoUrl, loading, fetchLogo, uploadLogo, removeLogo } = useLogoStore();
   const navigate = useNavigate();
+  const [statsOpen, setStatsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isTeacher =
@@ -91,7 +93,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
       {/* Mobil karartma katmani */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          className="fixed inset-0 z-40 bg-black/40"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -99,16 +101,15 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
       <aside
         className={cn(
-          "w-60 bg-white border-r flex flex-col shrink-0 z-50",
+          "rafly-sidebar w-60 border-r flex flex-col shrink-0 z-50",
           // Mobil: soldan kayan cekmece. Masaustu (md+): sabit ve her zaman gorunur.
           "fixed inset-y-0 left-0 h-full transform transition-transform duration-200 ease-in-out",
-          "md:static md:h-full md:translate-x-0 md:transition-none",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-      <div className="p-6 border-b">
+      <div className="sidebar-brand p-6 border-b">
         {/* Mobil kapatma butonu */}
-        <div className="flex justify-end md:hidden -mt-2 -mr-2 mb-1">
+        <div className="flex justify-end -mt-2 -mr-2 mb-1">
           <button
             onClick={onClose}
             aria-label="Menuyu kapat"
@@ -117,40 +118,21 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             <X size={18} />
           </button>
         </div>
-        <div className="flex items-center gap-2.5">
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt="Okul Logosu"
-              className="w-10 h-10 rounded-md object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-          ) : (
-            <img
-              src="/logo.png"
-              alt="Rafly"
-              className="w-10 h-10 rounded-md object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-          )}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-base font-bold leading-tight text-primary truncate">
-              {logoUrl ? school?.school_name || "Rafly" : "Rafly"}
-            </h1>
-            <p className="text-[10px] text-muted-foreground leading-tight uppercase tracking-wide">
-              {logoUrl ? "Kütüphane Sistemi" : "Library Automation"}
-            </p>
+        <div className="rafly-wordmark"><BookMarked size={29} strokeWidth={1.8} /><span>Rafly</span></div>
+        <div className="school-identity">
+          <div className="school-logo-wrap">
+            {logoUrl ? <img src={logoUrl} alt={`${school?.school_name || "Okul"} logosu`} className="school-logo" /> : <BookOpen size={31} strokeWidth={1.5} aria-hidden="true" />}
           </div>
+          <p className="school-name" title={school?.school_name || "Okul adı"}>{school?.school_name || "Okul Kütüphanesi"}</p>
+          <p className="school-caption">Kütüphane Yönetimi</p>
+        </div>
+        <div className="school-logo-actions">
           {isTeacher && (
             <div className="flex flex-col gap-0.5">
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
-                className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/5 transition-colors"
+                className="p-1 rounded transition-colors"
                 title="Logo yükle / değiştir"
               >
                 <Camera size={14} />
@@ -159,7 +141,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                 <button
                   onClick={handleRemoveLogo}
                   disabled={loading}
-                  className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
+                  className="p-1 rounded transition-colors"
                   title="Logoyu kaldır"
                 >
                   <Trash2 size={14} />
@@ -175,19 +157,10 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             onChange={handleFileChange}
           />
         </div>
-        {school && (
-          <div className="mt-4 px-2 py-2 bg-muted/50 rounded-md">
-            <p className="text-xs text-muted-foreground">Okul</p>
-            <p className="text-sm font-medium truncate">{school.school_name}</p>
-            <p className="text-[10px] text-muted-foreground">
-              Kod: {school.school_code}
-            </p>
-          </div>
-        )}
       </div>
 
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
+      <nav className="sidebar-nav flex-1 p-3 space-y-1">
+        {navItems.map((item) => item.to === "/reading-stats" ? <div key={item.to} className="sidebar-stats-group"><button type="button" className="sidebar-link flex items-center gap-3 w-full" aria-expanded={statsOpen} onClick={() => setStatsOpen(!statsOpen)}><TrendingUp size={18} /><span>Kütüphane İstatistikleri</span><span>{statsOpen ? "⌃" : "⌄"}</span></button>{statsOpen && <div className="sidebar-submenu"><NavLink to="/reading-stats" onClick={onClose}>Okuma İstatistikleri</NavLink><NavLink to="/book-stats" onClick={onClose}>Kitap İstatistikleri</NavLink></div>}</div> : (
           <NavLink
             key={item.to}
             to={item.to}
@@ -195,10 +168,10 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             onClick={onClose}
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                "sidebar-link flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  ? "sidebar-link-active"
+                  : "sidebar-link-idle"
               )
             }
           >
@@ -208,7 +181,7 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="p-3 border-t">
+      <div className="sidebar-footer p-3 border-t">
         {user && (
           <div className="px-3 py-2 mb-2">
             <p className="text-xs text-muted-foreground">Giriş yapan</p>

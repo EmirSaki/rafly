@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Users, BookOpen, ClipboardList, Clock, Library } from "lucide-react";
+import { Users, BookOpen, ClipboardList, Clock, Library, ArrowUpRight, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 import { getStudents } from "@/api/students";
 import { getSchoolBooks } from "@/api/books";
@@ -85,10 +86,12 @@ export function DashboardPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Anasayfa"
-        description="Kütüphane genel görünümü"
-      />
+      <PageHeader title="Anasayfa" description="Kütüphanenizin bugünkü görünümü, tek bakışta." />
+
+      <section className="dashboard-hero">
+        <div><span className="dashboard-eyebrow"><Sparkles size={15} /> RAFly KÜTÜPHANE</span><h2>İyi bir okuma günü<br />buradan başlar.</h2><p>Öğrenciler, kitaplar ve ödünç işlemleri tek bir çalışma alanında.</p></div>
+        <Link to="/quick-loan" className="dashboard-hero-action">Hızlı Ödünç <ArrowUpRight size={18} /></Link>
+      </section>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
@@ -131,7 +134,7 @@ export function DashboardPage() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="card p-5">
+        <div className="card p-5 dashboard-recent">
           <h2 className="font-semibold mb-3">Son Rezervasyonlar</h2>
           {reservationsLoading ? (
             <p className="text-sm text-muted-foreground">Yükleniyor...</p>
@@ -159,14 +162,13 @@ export function DashboardPage() {
           )}
         </div>
 
-        <div className="card p-5">
+        <div className="card p-5 dashboard-shortcuts">
           <h2 className="font-semibold mb-3">Hızlı İşlemler</h2>
-          <div className="space-y-2 text-sm">
-            <p className="text-muted-foreground">
-              Soldaki menüden öğrenci ve kitap yönetimine, rezervasyonlara
-              ulaşabilirsiniz. "Hızlı Ödünç" sayfasında öğrenci numarası ve
-              ISBN'i girerek tek tıkla ödünç verme işlemi yapabilirsiniz.
-            </p>
+          <div className="dashboard-shortcut-grid">
+            <Link to="/students"><Users size={21} /><span>Öğrenciler</span><ArrowUpRight size={16} /></Link>
+            <Link to="/books"><BookOpen size={21} /><span>Kitaplar</span><ArrowUpRight size={16} /></Link>
+            <Link to="/reservations"><ClipboardList size={21} /><span>Rezervasyonlar</span><ArrowUpRight size={16} /></Link>
+            <Link to="/reading-stats"><Clock size={21} /><span>Okuma Verileri</span><ArrowUpRight size={16} /></Link>
           </div>
         </div>
       </div>
