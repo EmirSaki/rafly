@@ -697,7 +697,12 @@ function annVisible(a,now){
   const userNo=String(state.user?.student_number||"").trim();
   if(tt==="school_level") return vals.map(v=>v.toLowerCase().trim()).includes(userLevel);
   if(tt==="class") return vals.map(v=>v.toUpperCase().trim()).includes(userClass);
-  if(tt==="section") return vals.includes(userNo);
+  if(tt==="section"){
+    // Kişisel uyarı: numara + (varsa) "seviye:<okul seviyesi>" birlikte eşleşmeli;
+    // aynı numaralı başka seviyedeki öğrencinin uyarısı gösterilmez.
+    const lv=vals.filter(v=>v.toLowerCase().startsWith("seviye:")).map(v=>v.slice(7).toLowerCase().trim());
+    return vals.includes(userNo) && (!lv.length || lv.includes(userLevel));
+  }
   return false;
 }
 

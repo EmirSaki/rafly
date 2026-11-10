@@ -55,6 +55,7 @@ async function checkOverdueReservations() {
           sr.due_date,
           COALESCE(sr.student_number, st.student_number) AS student_number,
           st.full_name,
+          st.school_level,
           b.book_name
         FROM ${schemaName}.reservations sr
         LEFT JOIN ${schemaName}.students st
@@ -71,6 +72,13 @@ async function checkOverdueReservations() {
         const studentNumber = row.student_number;
         if (!studentNumber) continue;
 
+        // Hedef numara + okul seviyesidir: aynı numara başka seviyede başka
+        // öğrenciye ait olabilir. Eski uygulamalar yalnızca numaraya bakar.
+        const level = String(row.school_level || "").trim().toLowerCase();
+        const targetValues = level
+          ? [String(studentNumber), `seviye:${level}`]
+          : [String(studentNumber)];
+
         const alreadySent = await client.query(
           `SELECT id FROM public.announcements
            WHERE school_code = $1
@@ -79,7 +87,7 @@ async function checkOverdueReservations() {
              AND title = 'Kitap İade Uyarısı'
              AND created_at::date = CURRENT_DATE
            LIMIT 1`,
-          [school.school_code, JSON.stringify([studentNumber])]
+          [school.school_code, JSON.stringify(targetValues)]
         );
 
         if (alreadySent.rows.length > 0) continue;
@@ -99,7 +107,7 @@ async function checkOverdueReservations() {
             school.school_code,
             "Kitap İade Uyarısı",
             `Sayın ${fullName}, "${bookName}" adlı kitabın iade tarihi geçmiştir. Lütfen kitabınızı kütüphaneye iade edin.`,
-            JSON.stringify([studentNumber]),
+            JSON.stringify(targetValues),
             today,
             endDate,
           ]

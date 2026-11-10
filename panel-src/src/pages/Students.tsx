@@ -114,7 +114,10 @@ export function StudentsPage() {
         title: "Kitap İade Uyarısı",
         content: `Sayın ${student.full_name}, aldığınız kitabın iade tarihi geçmiştir. Lütfen kitabınızı kütüphaneye iade edin.`,
         target_type: "section",
-        target_values: [student.student_number],
+        // Numara + seviye: aynı numaralı başka seviyedeki öğrenci bu uyarıyı görmez.
+        target_values: student.school_level
+          ? [student.student_number, `seviye:${String(student.school_level).toLowerCase()}`]
+          : [student.student_number],
         start_date: today,
         end_date: endDate,
       });

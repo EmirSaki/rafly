@@ -147,7 +147,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       return targets.contains(userClass);
     } else if (targetType == 'section') {
       // section tipi: overdue-notifier kişisel iade uyarıları için student_number kullanıyor
-      return targetValues.contains(userStudentNumber);
+      // Uyarıda "seviye:<okul seviyesi>" etiketi varsa o da eşleşmeli; aynı
+      // numaralı başka seviyedeki öğrencinin uyarısı gösterilmez.
+      final levels = targetValues
+          .where((v) => v.toLowerCase().startsWith('seviye:'))
+          .map((v) => v.substring(7).toLowerCase().trim())
+          .toList();
+      return targetValues.contains(userStudentNumber) &&
+          (levels.isEmpty || levels.contains(userLevel));
     }
 
     return false;

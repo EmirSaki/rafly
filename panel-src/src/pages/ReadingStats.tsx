@@ -145,7 +145,7 @@ export function ReadingStatsPage() {
   const studentStats = useMemo(() => {
     const map = new Map<string, StudentStat>();
     filtered.forEach((r) => {
-      const key = `${r.student_number}-${r.class_name}`;
+      const key = `${r.student_number}-${r.school_level}-${r.class_name}`;
       const existing = map.get(key);
       if (existing) {
         existing.count += 1;
@@ -419,13 +419,13 @@ export function ReadingStatsPage() {
         data={studentStats}
         loading={isLoading}
         emptyText="Bu filtreler için iade edilmiş kitap kaydı bulunamadı"
-        getRowKey={(s) => `${s.student_number}-${s.class_name}`}
+        getRowKey={(s) => `${s.student_number}-${s.school_level}-${s.class_name}`}
         onRowClick={setSelectedStudent}
       />
       {selectedStudent && <div className="card p-5 mt-4" role="dialog" aria-label="Öğrencinin okuduğu kitaplar">
         <button type="button" className="float-right" onClick={() => setSelectedStudent(null)}>Kapat</button>
         <h3 className="font-semibold mb-3">{selectedStudent.student_name} · Okuduğu kitaplar</h3>
-        {filtered.filter((r) => r.student_number === selectedStudent.student_number && r.class_name === selectedStudent.class_name).map((r) =>
+        {filtered.filter((r) => r.student_number === selectedStudent.student_number && r.class_name === selectedStudent.class_name && (r.school_level || "-") === selectedStudent.school_level).map((r) =>
           <p key={r.reservation_id} className="border-t py-2">{r.book_name} <span className="text-muted-foreground">· {formatDate(r.returned_at)}</span></p>
         )}
       </div>}

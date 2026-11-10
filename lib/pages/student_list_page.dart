@@ -360,7 +360,12 @@ class _StudentListPageState extends State<StudentListPage> {
         title: "Kitap İade Uyarısı",
         content: "Sayın $fullName, aldığınız kitabın iade tarihi geçmiştir. Lütfen kitabınızı kütüphaneye iade edin.",
         targetType: "section",
-        targetValues: [studentNumber],
+        // Numara + seviye: aynı numaralı başka seviyedeki öğrenci bu uyarıyı görmez.
+        targetValues: [
+          studentNumber,
+          if ((student["school_level"]?.toString().trim() ?? "").isNotEmpty)
+            "seviye:${student["school_level"].toString().trim().toLowerCase()}",
+        ],
         startDate: startStr,
         endDate: endStr,
       );
