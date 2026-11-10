@@ -62,11 +62,16 @@ class _ReturnBookPageState extends State<ReturnBookPage> {
       final allLoaned = await ApiService.getReservations(
         schoolCode: widget.schoolCode,
         status: "loaned",
+        studentNumber: studentNumber,
+        schoolLevel: selectedLevel,
       );
 
+      // Numara + seviye birlikte eşleşmeli; yalnızca numarası tutan başka
+      // seviyedeki öğrencinin ödünçleri listelenmez.
       final filtered = allLoaned.where((item) {
-        return item["student_number"]?.toString() == studentNumber &&
-            item["school_level"]?.toString() == selectedLevel;
+        return item["student_number"]?.toString().trim() == studentNumber &&
+            (item["school_level"]?.toString().trim().toLowerCase() ?? "") ==
+                selectedLevel.toLowerCase();
       }).toList();
 
       if (!mounted) return;
@@ -142,7 +147,11 @@ class _ReturnBookPageState extends State<ReturnBookPage> {
                 const SizedBox(height: 4),
                 Text("ISBN: ${item["isbn"] ?? "-"}", style: const TextStyle(fontSize: 13, color: kTextSecondary)),
                 Text("Öğrenci: ${item["student_name"] ?? "-"}", style: const TextStyle(fontSize: 13, color: kTextSecondary)),
-                Text("Sınıf: ${item["class_name"] ?? "-"}", style: const TextStyle(fontSize: 13, color: kTextSecondary)),
+                Text(
+                  "Sınıf: ${item["class_name"] ?? "-"} · ${item["school_level"] ?? "-"}"
+                  "${item["student_archived_at"] != null ? " · Eski öğrenci" : ""}",
+                  style: const TextStyle(fontSize: 13, color: kTextSecondary),
+                ),
                 Text("İade tarihi: ${formatDate(item["due_date"])}",
                     style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: kTextPrimary)),
               ],

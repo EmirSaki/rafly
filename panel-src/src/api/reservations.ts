@@ -5,6 +5,7 @@ export interface ReservationsQuery {
   schoolCode: string;
   status?: ReservationStatus | "";
   studentNumber?: string;
+  school_level?: string;
   startDate?: string;
   endDate?: string;
 }
@@ -30,6 +31,7 @@ export interface LoanByStudentPayload {
   isbn: string;
   student_number: string;
   school_level?: string;
+  class_name?: string;
   due_date?: string;
 }
 

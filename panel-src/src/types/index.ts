@@ -96,6 +96,8 @@ export interface Reservation {
   class_name?: string;
   class_code?: string;
   school_level?: string;
+  // Dolu ise öğrenci mezun/eski öğrencidir
+  student_archived_at?: string | null;
 }
 
 export interface IsbnLookupResult {

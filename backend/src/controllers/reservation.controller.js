@@ -18,6 +18,65 @@ async function ensureStudentColumns(client, schemaName) {
     ALTER TABLE ${schemaName}.students
     ADD COLUMN IF NOT EXISTS school_level VARCHAR(50)
   `);
+
+  await client.query(`
+    ALTER TABLE ${schemaName}.students
+    ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP
+  `);
+}
+
+function normalizeLevel(value) {
+  return value && String(value).trim() !== ""
+    ? String(value).trim().toLowerCase()
+    : null;
+}
+
+// Öğrencinin kimliği numara + okul seviyesidir (aynı numara ortaokulda ve
+// lisede farklı öğrencilere ait olabilir). Mezun/arşivli (archived_at dolu)
+// öğrenciler aynı numarayı taşısa bile ASLA eşleşmez: kitap yalnızca aktif
+// öğrenciye verilir.
+// Dönüş: { student } | { notFound: true } | { ambiguous: [adaylar] }
+async function resolveActiveStudent(client, schemaName, { studentNumber, level, className }) {
+  const result = await client.query(
+    `
+    SELECT *
+    FROM ${schemaName}.students
+    WHERE student_number = $1
+      AND archived_at IS NULL
+    ORDER BY student_id ASC
+    `,
+    [String(studentNumber).trim()]
+  );
+
+  let candidates = result.rows;
+  const levelOf = (row) => String(row.school_level || "").trim().toLowerCase();
+
+  if (level) {
+    const exact = candidates.filter((row) => levelOf(row) === level);
+    // Seviyesi hiç girilmemiş eski kayıtlar, yalnızca tam eşleşme yoksa kabul edilir.
+    candidates = exact.length > 0 ? exact : candidates.filter((row) => levelOf(row) === "");
+  }
+
+  if (className && String(className).trim() !== "" && candidates.length > 1) {
+    const wanted = String(className).trim().toLocaleUpperCase("tr-TR");
+    const byClass = candidates.filter(
+      (row) => String(row.class_name || "").trim().toLocaleUpperCase("tr-TR") === wanted
+    );
+    if (byClass.length > 0) candidates = byClass;
+  }
+
+  if (candidates.length === 0) return { notFound: true };
+  if (candidates.length > 1) {
+    return {
+      ambiguous: candidates.map((row) => ({
+        student_number: row.student_number,
+        full_name: row.full_name,
+        class_name: row.class_name,
+        school_level: row.school_level,
+      })),
+    };
+  }
+  return { student: candidates[0] };
 }
 
 async function ensureSchoolReservationColumns(client, schemaName) {
@@ -183,6 +242,7 @@ const getAllReservations = async (req, res, next) => {
         st.class_name,
         st.class_code,
         st.school_level,
+        st.archived_at AS student_archived_at,
         sr.reserved_at,
         sr.due_date,
         sr.returned_at,
@@ -413,7 +473,7 @@ const loanBookByStudent = async (req, res, next) => {
   const client = await pool.connect();
 
   try {
-    const { schoolCode, isbn, student_number, school_level, due_date } = req.body;
+    const { schoolCode, isbn, student_number, school_level, class_name, due_date } = req.body;
 
     if (!schoolCode || !isbn || !student_number) {
       return res.status(400).json({
@@ -430,10 +490,7 @@ const loanBookByStudent = async (req, res, next) => {
     }
 
     const normalizedIsbn = normalizeIsbn(isbn);
-    const normalizedLevel =
-      school_level && String(school_level).trim() !== ""
-        ? String(school_level).trim().toLowerCase()
-        : null;
+    const normalizedLevel = normalizeLevel(school_level);
     const schemaName = `school_${schoolCode}`;
 
     await client.query("BEGIN");
@@ -456,31 +513,46 @@ const loanBookByStudent = async (req, res, next) => {
     await ensureStudentColumns(client, schemaName);
     await ensureSchoolReservationColumns(client, schemaName);
 
-    const studentResult = await client.query(
-      `
-      SELECT *
-      FROM ${schemaName}.students
-      WHERE student_number = $1
-        AND (
-          $2::text IS NULL
-          OR school_level IS NULL
-          OR LOWER(COALESCE(school_level, '')) = $2
-        )
-      LIMIT 1
-      `,
-      [String(student_number), normalizedLevel]
-    );
+    const resolved = await resolveActiveStudent(client, schemaName, {
+      studentNumber: student_number,
+      level: normalizedLevel,
+      className: class_name,
+    });
 
-    if (studentResult.rows.length === 0) {
+    if (resolved.notFound) {
       await client.query("ROLLBACK");
       return res.status(404).json({
         success: false,
-        message: "Öğrenci bulunamadı",
+        message: normalizedLevel
+          ? `Bu okul seviyesinde (${normalizedLevel}) ${String(student_number).trim()} numaralı aktif öğrenci bulunamadı`
+          : "Bu numarada aktif öğrenci bulunamadı",
       });
     }
 
-    const student = studentResult.rows[0];
+    if (resolved.ambiguous) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        success: false,
+        code: "AMBIGUOUS_STUDENT",
+        message: normalizedLevel
+          ? "Bu numara ve seviyede birden fazla öğrenci var. Sınıfı da seçin."
+          : "Bu numarada birden fazla öğrenci var. Okul seviyesini seçin.",
+        candidates: resolved.ambiguous,
+      });
+    }
 
+    const student = resolved.student;
+    const studentLevel = String(student.school_level || "").trim().toLowerCase();
+
+    await client.query(
+      `ALTER TABLE public.users ADD COLUMN IF NOT EXISTS school_level VARCHAR(50)`
+    );
+    await client.query(
+      `ALTER TABLE ${schemaName}.users ADD COLUMN IF NOT EXISTS school_level VARCHAR(50)`
+    );
+
+    // Giriş kaydı da numara + seviye ile eşleşir; başka seviyedeki aynı
+    // numaralı öğrencinin hesabı kullanılmaz.
     let userResult = await client.query(
       `
       SELECT *
@@ -488,16 +560,20 @@ const loanBookByStudent = async (req, res, next) => {
       WHERE school_id = $1
         AND user_role = 'student'
         AND student_id = $2
+        AND LOWER(COALESCE(school_level, '')) = $3
+      ORDER BY user_id ASC
       LIMIT 1
       `,
-      [school.school_id, String(student_number)]
+      [school.school_id, String(student_number).trim(), studentLevel]
     );
 
     if (userResult.rows.length === 0) {
       const nameParts = String(student.full_name || "").trim().split(/\s+/);
       const fallbackName = nameParts.shift() || "Öğrenci";
       const fallbackSurname = nameParts.join(" ") || "-";
-      const fallbackEmail = `student-${school.school_code}-${String(student_number).trim()}@no-email.local`;
+      // student.student_id (satır kimliği) okul içinde benzersizdir; aynı numaralı
+      // farklı öğrenciler için e-posta çakışmaz.
+      const fallbackEmail = `student-${school.school_code}-${String(student_number).trim()}-${student.student_id}@no-email.local`;
 
       userResult = await client.query(
         `
@@ -511,19 +587,21 @@ const loanBookByStudent = async (req, res, next) => {
           user_class_code,
           school_id,
           email,
-          password
+          password,
+          school_level
         )
-        VALUES ($1, $2, 'student', $3, $4, $5, $6, $7, NULL)
+        VALUES ($1, $2, 'student', $3, $4, $5, $6, $7, NULL, $8)
         RETURNING *
         `,
         [
           fallbackName,
           fallbackSurname,
-          String(student_number),
+          String(student_number).trim(),
           student.class_name || null,
           student.class_code || null,
           school.school_id,
           fallbackEmail,
+          studentLevel,
         ]
       );
 
@@ -540,9 +618,10 @@ const loanBookByStudent = async (req, res, next) => {
           student_id,
           user_class,
           user_class_code,
-          school_id
+          school_id,
+          school_level
         )
-        VALUES ($1, $2, $3, $4, NULL, 'student', $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, NULL, 'student', $5, $6, $7, $8, $9)
         ON CONFLICT (user_id) DO UPDATE SET
           user_name = EXCLUDED.user_name,
           user_surname = EXCLUDED.user_surname,
@@ -550,17 +629,19 @@ const loanBookByStudent = async (req, res, next) => {
           student_id = EXCLUDED.student_id,
           user_class = EXCLUDED.user_class,
           user_class_code = EXCLUDED.user_class_code,
-          school_id = EXCLUDED.school_id
+          school_id = EXCLUDED.school_id,
+          school_level = EXCLUDED.school_level
         `,
         [
           userResult.rows[0].user_id,
           userResult.rows[0].user_name,
           userResult.rows[0].user_surname,
           fallbackEmail,
-          String(student_number),
+          String(student_number).trim(),
           student.class_name || null,
           student.class_code || null,
           school.school_id,
+          studentLevel,
         ]
       );
     }
@@ -608,14 +689,13 @@ const loanBookByStudent = async (req, res, next) => {
       FROM ${schemaName}.reservations
       WHERE book_id = $1
         AND (
-          user_id = $2
-          OR student_number = $3
-          OR student_local_id = $4
+          student_local_id = $3
+          OR (student_local_id IS NULL AND user_id = $2)
         )
         AND status IN ('pending_approval', 'reserved', 'loaned', 'return_requested')
       LIMIT 1
       `,
-      [book.book_id, userId, String(student_number), student.student_id]
+      [book.book_id, userId, student.student_id]
     );
 
     if (activeLoan.rows.length > 0) {
@@ -675,7 +755,7 @@ const loanBookByStudent = async (req, res, next) => {
       [
         userId,
         student.student_id,
-        String(student_number),
+        String(student_number).trim(),
         publicReservation.rows[0].reservation_id,
         book.book_id,
         school.school_id,
@@ -780,12 +860,13 @@ const updateReservationStatus = async (req, res, next, targetStatus, message) =>
         SELECT reservation_id FROM ${schemaName}.reservations
         WHERE public_reservation_id = $2
            OR (
-            user_id = $3
+            public_reservation_id IS NULL
+            AND user_id = $3
             AND book_id = $4
             AND school_id = $5
             AND status NOT IN ('returned', 'rejected')
           )
-        ORDER BY reservation_id DESC
+        ORDER BY (public_reservation_id IS NOT NULL) DESC, reservation_id DESC
         LIMIT 1
       )
       `,
@@ -866,12 +947,13 @@ const returnReservation = async (req, res, next) => {
       FROM ${schemaName}.reservations
       WHERE public_reservation_id = $1
          OR (
-          user_id = $2
+          public_reservation_id IS NULL
+          AND user_id = $2
           AND book_id = $3
           AND school_id = $4
           AND status = 'loaned'
         )
-      ORDER BY reservation_id DESC
+      ORDER BY (public_reservation_id IS NOT NULL) DESC, reservation_id DESC
       LIMIT 1
       FOR UPDATE
       `,
@@ -1066,6 +1148,7 @@ const deleteReservation = async (req, res, next) => {
 };
 
 module.exports = {
+  resolveActiveStudent,
   getAllReservations,
   getReservationById,
   createReservation,

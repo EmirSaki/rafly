@@ -45,6 +45,7 @@ class _StudentReservationHistoryPageState
       final allResults = await ApiService.getReservations(
         schoolCode: widget.schoolCode,
         studentNumber: studentNumber,
+        schoolLevel: schoolLevel,
       );
 
       final filtered = schoolLevel.isEmpty

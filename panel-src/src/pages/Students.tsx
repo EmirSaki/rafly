@@ -26,6 +26,22 @@ import type { Student, Reservation } from "@/types";
 
 const ARCHIVED_FILTER = "__archived__";
 
+// Bir ödüncü öğrenciyle eşlerken yalnızca numara yetmez: aynı numara başka
+// seviyede ya da mezun bir öğrencide de olabilir.
+function loanKey(
+  number?: string | null,
+  level?: string | null,
+  className?: string | null,
+  archived?: unknown
+) {
+  return [
+    String(number || "").trim(),
+    String(level || "").trim().toLowerCase(),
+    String(className || "").trim().toLocaleUpperCase("tr-TR"),
+    archived ? "eski" : "aktif",
+  ].join("|");
+}
+
 const SCHOOL_LEVELS = [
   { value: "", label: "Tüm seviyeler" },
   { value: "ilkokul", label: "İlkokul" },
@@ -77,7 +93,10 @@ export function StudentsPage() {
       const due = new Date(r.due_date);
       due.setHours(0, 0, 0, 0);
       if (due < now && r.student_number) {
-        map.set(r.student_number, r);
+        map.set(
+          loanKey(r.student_number, r.school_level, r.class_name, r.student_archived_at),
+          r
+        );
       }
     }
     return map;
@@ -204,7 +223,9 @@ export function StudentsPage() {
       header: "Durum",
       align: "right",
       render: (s) => {
-        const overdue = overdueMap.has(s.student_number);
+        const overdue = overdueMap.has(
+          loanKey(s.student_number, s.school_level, s.class_name, s.archived_at)
+        );
         if (s.archived_at && !overdue)
           return <Badge variant="default">Eski Öğrenci</Badge>;
         if (!overdue) return null;
@@ -300,7 +321,7 @@ export function StudentsPage() {
             ? "Eski öğrenci yok. Sınıf Atlatma'da listede olmayanlar buraya taşınır."
             : "Öğrenci kaydı yok. Excel yükle veya manuel ekle."
         }
-        getRowKey={(s) => `${s.student_number}-${s.class_name}`}
+        getRowKey={(s) => `${s.student_number}-${s.school_level}-${s.class_name}-${s.archived_at || ""}`}
         onRowClick={(s) => setDetailStudent(s)}
       />
 

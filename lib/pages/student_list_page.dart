@@ -117,6 +117,8 @@ class _StudentListPageState extends State<StudentListPage> {
       final overdue = <String>{};
       final now = DateTime.now();
       for (final r in reservations) {
+        // Mezun/eski öğrencinin ödüncü, aynı numaralı aktif öğrenciye yazılmasın.
+        if (r["student_archived_at"] != null) continue;
         final num = r["student_number"]?.toString().trim().replaceAll(RegExp(r'\s+'), '') ?? "";
         final level = r["school_level"]?.toString().trim().toLowerCase() ?? "";
         if (num.isNotEmpty) {

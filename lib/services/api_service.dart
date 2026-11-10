@@ -504,10 +504,16 @@ class ApiService {
     required String schoolCode,
     String? status,
     String? studentNumber,
+    String? schoolLevel,
     String? startDate,
     String? endDate,
   }) async {
     final params = <String>["schoolCode=$schoolCode"];
+
+    // Öğrenci kimliği numara + seviyedir; aynı numara başka seviyede de olabilir.
+    if (schoolLevel != null && schoolLevel.trim().isNotEmpty) {
+      params.add("school_level=${Uri.encodeComponent(schoolLevel.trim().toLowerCase())}");
+    }
 
     if (status != null && status.trim().isNotEmpty) {
       params.add("status=${Uri.encodeComponent(status.trim().toLowerCase())}");

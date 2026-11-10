@@ -161,6 +161,8 @@ export function ReservationsPage() {
           <p className="text-xs text-muted-foreground">
             {r.student_number ? `#${r.student_number}` : "-"}
             {r.class_name ? ` · ${r.class_name}` : ""}
+            {r.school_level ? ` · ${r.school_level}` : ""}
+            {r.student_archived_at ? " · Eski öğrenci" : ""}
           </p>
         </div>
       ),

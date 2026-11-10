@@ -4,31 +4,12 @@ const jwt = require("jsonwebtoken");
 const { ensureStudentsUniqueIndex } = require("../config/studentsIndex");
 const ExcelJS = require("exceljs");
 const XLSX = require("xlsx");
-const crypto = require("crypto");
-const { sendStudentPasswordEmail } = require("../utils/mailer");
 
 // Tüm öğrenciler için sabit giriş şifresi. Mail ile şifre alma kaldırıldı;
 // öğrenciler okul kodu + seviye + numara + bu şifre ile giriş yapar.
+const { resolveActiveStudent } = require("./reservation.controller");
+
 const STUDENT_PASSWORD = "1234";
-
-// Belirsiz karakter içermeyen (0/O, 1/I/l yok) okunaklı şifre üretir
-function generateStudentPassword(len = 6) {
-  const alphabet = "ABCDEFGHJKLMNPRSTUVYZ23456789";
-  let out = "";
-  for (let i = 0; i < len; i++) {
-    out += alphabet[crypto.randomInt(0, alphabet.length)];
-  }
-  return out;
-}
-
-// E-postayı maskele: ornek@mail.com -> or***@mail.com
-function maskEmail(email) {
-  const [user, domain] = String(email || "").split("@");
-  if (!domain) return email;
-  const visible = user.slice(0, Math.min(2, user.length));
-  const stars = "*".repeat(Math.max(1, user.length - visible.length));
-  return `${visible}${stars}@${domain}`;
-}
 
 function signStudentToken(user) {
   return jwt.sign(
@@ -1185,12 +1166,18 @@ const loginStudent = async (req, res, next) => {
       return res.status(401).json({ success: false, message: "Okul bulunamadı" });
     }
 
+    await pool.query(
+      `ALTER TABLE ${schemaName}.students ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP`
+    );
+
     // 2) Students tablosunda bu numara + seviye var mı?
+    //    Aynı numara+seviyede mezun (arşivli) bir kayıt da olabilir; aktif olan önceliklidir.
     const studentResult = await pool.query(
       `SELECT student_id, student_number, full_name, class_name, class_code, school_level
        FROM ${schemaName}.students
        WHERE student_number = $1
          AND LOWER(COALESCE(school_level, '')) = $2
+       ORDER BY (archived_at IS NULL) DESC, student_id DESC
        LIMIT 1`,
       [student_number, normalizedLevel]
     );
@@ -1223,12 +1210,14 @@ const loginStudent = async (req, res, next) => {
     await pool.query(`ALTER TABLE ${schemaName}.users ADD COLUMN IF NOT EXISTS school_level VARCHAR(50)`);
 
     // Token ve rezervasyon FK'si için öğrencinin bir giriş kaydı olmalı:
-    // bu seviye için ara, yoksa öğrencinin herhangi bir kaydını kullan, o da
+    // bu seviye için ara, yoksa seviyesi hiç yazılmamış eski kaydı sahiplen, o da
     // yoksa (ör. Excel'den eklenip şifre atanmamış) sabit şifreyle yeni kayıt oluştur.
+    // BAŞKA seviyedeki aynı numaralı öğrencinin hesabı asla kullanılmaz.
     let userResult = await pool.query(
       `SELECT u.* FROM ${schemaName}.users u
        WHERE u.user_role = 'student' AND u.student_id = $1
          AND LOWER(COALESCE(u.school_level, '')) = $2
+       ORDER BY u.user_id ASC
        LIMIT 1`,
       [student_number, normalizedLevel]
     );
@@ -1238,13 +1227,23 @@ const loginStudent = async (req, res, next) => {
       const anyUserResult = await pool.query(
         `SELECT u.* FROM ${schemaName}.users u
          WHERE u.user_role = 'student' AND u.student_id = $1
+           AND COALESCE(u.school_level, '') = ''
+         ORDER BY u.user_id ASC
          LIMIT 1`,
         [student_number]
       );
 
-      if (anyUserResult.rows.length > 0) {
-        // Öğrencinin başka seviyedeki kaydını kullan (token seviyesi istekten gelir)
+      if (normalizedLevel && anyUserResult.rows.length > 0) {
+        // Seviyesi yazılmamış eski kayıt: bu seviyeye bağla ki bir daha paylaşılmasın
         user = anyUserResult.rows[0];
+        await pool.query(
+          `UPDATE ${schemaName}.users SET school_level = $1 WHERE user_id = $2`,
+          [normalizedLevel, user.user_id]
+        );
+        await pool.query(
+          `UPDATE public.users SET school_level = $1 WHERE user_id = $2`,
+          [normalizedLevel, user.user_id]
+        );
       } else {
         // Hiç giriş kaydı yok → sabit şifreyle yeni kayıt oluştur
         const hashed = await bcrypt.hash(STUDENT_PASSWORD, 10);
@@ -1322,12 +1321,27 @@ const loginStudent = async (req, res, next) => {
   }
 };
 
+// Token'daki numara + seviye ile eşleşen AKTİF öğrenci satırının kimliği.
+// Tek bir öğrenci net olarak bulunamazsa null döner (eski davranışa düşülür).
+async function findMyStudentId(client, schemaName, studentNumber, schoolLevel) {
+  if (!studentNumber) return null;
+  try {
+    const resolved = await resolveActiveStudent(client, schemaName, {
+      studentNumber,
+      level: schoolLevel ? String(schoolLevel).trim().toLowerCase() : null,
+    });
+    return resolved.student ? resolved.student.student_id : null;
+  } catch (_) {
+    return null;
+  }
+}
+
 const createStudentReservation = async (req, res, next) => {
   const client = await pool.connect();
 
   try {
     const { book_id } = req.body;
-    const { user_id, school_id, school_code } = req.user;
+    const { user_id, school_id, school_code, student_number, school_level } = req.user;
 
     if (!book_id) {
       return res.status(400).json({
@@ -1368,16 +1382,29 @@ const createStudentReservation = async (req, res, next) => {
       });
     }
 
+    // Talebi numara + seviye ile eşleşen AKTİF öğrenci satırına bağla; böylece
+    // panelde doğru öğrencinin adı görünür ve aynı numaralı başka öğrenciyle karışmaz.
+    await client.query(
+      `ALTER TABLE ${schemaName}.reservations ADD COLUMN IF NOT EXISTS student_number VARCHAR(50)`
+    );
+    await client.query(
+      `ALTER TABLE ${schemaName}.reservations ADD COLUMN IF NOT EXISTS public_reservation_id INTEGER`
+    );
+    const studentLocalId = await findMyStudentId(client, schemaName, student_number, school_level);
+
     const activeReservation = await client.query(
       `
       SELECT reservation_id
       FROM ${schemaName}.reservations
-      WHERE user_id = $1
-        AND book_id = $2
+      WHERE book_id = $2
+        AND (
+          ($3::int IS NOT NULL AND student_local_id = $3)
+          OR (student_local_id IS NULL AND user_id = $1)
+        )
         AND status IN ('pending_approval', 'loaned', 'return_requested')
       LIMIT 1
       `,
-      [user_id, book_id]
+      [user_id, book_id, studentLocalId]
     );
 
     if (activeReservation.rows.length > 0) {
@@ -1414,12 +1441,22 @@ const createStudentReservation = async (req, res, next) => {
         book_id,
         school_id,
         status,
-        reserved_at
+        reserved_at,
+        student_local_id,
+        student_number,
+        public_reservation_id
       )
-      VALUES ($1, $2, $3, 'pending_approval', CURRENT_TIMESTAMP)
+      VALUES ($1, $2, $3, 'pending_approval', CURRENT_TIMESTAMP, $4, $5, $6)
       RETURNING *
       `,
-      [user_id, book_id, school_id]
+      [
+        user_id,
+        book_id,
+        school_id,
+        studentLocalId,
+        student_number ? String(student_number).trim() : null,
+        publicReservation.rows[0].reservation_id,
+      ]
     );
 
     await client.query(
@@ -1451,8 +1488,9 @@ const createStudentReservation = async (req, res, next) => {
 
 const getMyReservations = async (req, res, next) => {
   try {
-    const { user_id, school_code } = req.user;
+    const { user_id, school_code, student_number, school_level } = req.user;
     const schemaName = `school_${school_code}`;
+    const studentLocalId = await findMyStudentId(pool, schemaName, student_number, school_level);
 
     const result = await pool.query(
       `
@@ -1464,10 +1502,14 @@ const getMyReservations = async (req, res, next) => {
         b.isbn
       FROM ${schemaName}.reservations r
       JOIN public.books b ON b.book_id = r.book_id
-      WHERE r.user_id = $1
+      WHERE (
+        ($2::int IS NOT NULL AND r.student_local_id = $2)
+        OR (r.student_local_id IS NULL AND r.user_id = $1)
+        OR ($2::int IS NULL AND r.user_id = $1)
+      )
       ORDER BY r.reserved_at DESC
       `,
-      [user_id]
+      [user_id, studentLocalId]
     );
 
     return res.status(200).json({
@@ -1485,10 +1527,6 @@ const getMyProfile = async (req, res, next) => {
 
     await pool.query(`
       ALTER TABLE public.users
-      ADD COLUMN IF NOT EXISTS phone VARCHAR(20)
-    `);
-    await pool.query(`
-      ALTER TABLE public.users
       ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT FALSE
     `);
     await pool.query(`
@@ -1502,8 +1540,6 @@ const getMyProfile = async (req, res, next) => {
         user_id,
         user_name,
         user_surname,
-        email,
-        phone,
         user_role,
         student_id,
         user_class,
@@ -1537,12 +1573,8 @@ const getMyProfile = async (req, res, next) => {
 const updateMyProfile = async (req, res, next) => {
   try {
     const { user_id } = req.user;
-    const { email, phone, password } = req.body;
+    const { password } = req.body;
 
-    await pool.query(`
-      ALTER TABLE public.users
-      ADD COLUMN IF NOT EXISTS phone VARCHAR(20)
-    `);
     await pool.query(`
       ALTER TABLE public.users
       ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT FALSE
@@ -1569,18 +1601,14 @@ const updateMyProfile = async (req, res, next) => {
     const result = await pool.query(
       `
       UPDATE public.users
-      SET email = $1,
-          phone = $2,
-          password = $3,
+      SET password = $1,
           profile_completed = TRUE,
-          plain_password = COALESCE($5, plain_password)
-      WHERE user_id = $4
+          plain_password = COALESCE($3, plain_password)
+      WHERE user_id = $2
       RETURNING
         user_id,
         user_name,
         user_surname,
-        email,
-        phone,
         user_role,
         student_id,
         user_class,
@@ -1589,8 +1617,6 @@ const updateMyProfile = async (req, res, next) => {
         profile_completed
       `,
       [
-        email ?? current.email,
-        phone ?? current.phone,
         hashedPassword,
         user_id,
         password || null,
@@ -2018,189 +2044,11 @@ const deleteMyAccount = async (req, res, next) => {
   }
 };
 
-// ─── İlk giriş / şifre alma: numara okulda varsa e-postaya şifre gönder ───
-const requestStudentPassword = async (req, res, next) => {
-  const client = await pool.connect();
-
-  try {
-    const { schoolCode, student_number, school_level, email } = req.body;
-
-    if (!schoolCode || !student_number || !school_level || !email) {
-      return res.status(400).json({
-        success: false,
-        message: "schoolCode, student_number, school_level ve email zorunlu",
-      });
-    }
-
-    if (!/^\d+$/.test(String(schoolCode))) {
-      return res.status(400).json({ success: false, message: "Geçersiz okul kodu" });
-    }
-
-    const emailInput = String(email).trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput)) {
-      return res.status(400).json({ success: false, message: "Geçerli bir e-posta adresi girin" });
-    }
-
-    const studentNumber = String(student_number).trim();
-    const normalizedLevel = String(school_level).trim().toLowerCase();
-    const schemaName = `school_${schoolCode}`;
-
-    await client.query("BEGIN");
-
-    const schemaCheck = await client.query(
-      `SELECT schema_name FROM information_schema.schemata WHERE schema_name = $1`,
-      [schemaName]
-    );
-    if (schemaCheck.rows.length === 0) {
-      await client.query("ROLLBACK");
-      return res.status(404).json({ success: false, message: "Okul bulunamadı" });
-    }
-
-    await client.query(`ALTER TABLE ${schemaName}.students ADD COLUMN IF NOT EXISTS class_code VARCHAR(50)`);
-    await client.query(`ALTER TABLE ${schemaName}.students ADD COLUMN IF NOT EXISTS school_level VARCHAR(50)`);
-
-    // Öğrenci listede var mı?
-    const studentRes = await client.query(
-      `SELECT student_number, full_name, class_name, class_code, school_level
-       FROM ${schemaName}.students
-       WHERE student_number = $1 AND LOWER(COALESCE(school_level, '')) = $2
-       LIMIT 1`,
-      [studentNumber, normalizedLevel]
-    );
-    if (studentRes.rows.length === 0) {
-      await client.query("ROLLBACK");
-      return res.status(404).json({
-        success: false,
-        message: "Bu okul seviyesinde bu numarada öğrenci bulunamadı",
-      });
-    }
-
-    const student = studentRes.rows[0];
-    const nameParts = String(student.full_name || "").trim().split(/\s+/);
-    const firstName = nameParts.shift() || "Öğrenci";
-    const lastName = nameParts.join(" ") || "-";
-
-    const schoolRow = await client.query(
-      `SELECT school_id, school_name FROM public.schools WHERE school_code = $1 LIMIT 1`,
-      [schoolCode]
-    );
-    const schoolId = schoolRow.rows[0]?.school_id;
-    const schoolName = schoolRow.rows[0]?.school_name || `Okul ${schoolCode}`;
-    if (!schoolId) {
-      await client.query("ROLLBACK");
-      return res.status(404).json({ success: false, message: "Okul kaydı bulunamadı" });
-    }
-
-    await client.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS school_level VARCHAR(50)`);
-    await client.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS phone VARCHAR(20)`);
-    await client.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT FALSE`);
-    await client.query(`ALTER TABLE ${schemaName}.users ADD COLUMN IF NOT EXISTS school_level VARCHAR(50)`);
-
-    // Mevcut giriş hesabı (public.users) var mı?
-    const pubUserRes = await client.query(
-      `SELECT user_id, email FROM public.users
-       WHERE school_id = $1 AND user_role = 'student' AND student_id = $2
-         AND LOWER(COALESCE(school_level, '')) = $3
-       LIMIT 1`,
-      [schoolId, studentNumber, normalizedLevel]
-    );
-
-    // Hesap ele geçirme koruması: kayıtlı e-posta varsa ve girilen farklıysa,
-    // şifreyi yine SADECE kayıtlı adrese gönder (başkası başkasının hesabını alamaz).
-    const registeredEmail = pubUserRes.rows[0]?.email
-      ? String(pubUserRes.rows[0].email).trim().toLowerCase()
-      : "";
-    const targetEmail =
-      registeredEmail && registeredEmail !== emailInput ? registeredEmail : emailInput;
-
-    const newPassword = generateStudentPassword(6);
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    let userId;
-    if (pubUserRes.rows.length > 0) {
-      userId = pubUserRes.rows[0].user_id;
-      await client.query(
-        `UPDATE public.users
-         SET password = $1, plain_password = $2, email = $3, profile_completed = TRUE
-         WHERE user_id = $4`,
-        [hashedPassword, newPassword, targetEmail, userId]
-      );
-    } else {
-      const ins = await client.query(
-        `INSERT INTO public.users
-         (user_name, user_surname, user_role, student_id, user_class, user_class_code, school_id, email, password, plain_password, school_level, profile_completed)
-         VALUES ($1, $2, 'student', $3, $4, $5, $6, $7, $8, $9, $10, TRUE)
-         RETURNING user_id`,
-        [
-          firstName, lastName, studentNumber,
-          student.class_name, student.class_code || student.class_name,
-          schoolId, targetEmail, hashedPassword, newPassword, normalizedLevel,
-        ]
-      );
-      userId = ins.rows[0].user_id;
-    }
-
-    // schema.users aynasını oluştur/güncelle (profil e-postası public.users'ta tutulur)
-    const schemaUserRes = await client.query(
-      `SELECT user_id FROM ${schemaName}.users WHERE user_id = $1 LIMIT 1`,
-      [userId]
-    );
-    if (schemaUserRes.rows.length > 0) {
-      await client.query(
-        `UPDATE ${schemaName}.users SET password = $1 WHERE user_id = $2`,
-        [hashedPassword, userId]
-      );
-    } else {
-      await client.query(
-        `INSERT INTO ${schemaName}.users
-         (user_id, user_name, user_surname, email, password, user_role, student_id, user_class, user_class_code, school_id, school_level)
-         VALUES ($1, $2, $3, '', $4, 'student', $5, $6, $7, $8, $9)`,
-        [
-          userId, firstName, lastName, hashedPassword, studentNumber,
-          student.class_name, student.class_code || student.class_name,
-          schoolId, normalizedLevel,
-        ]
-      );
-    }
-
-    // E-postayı gönder — başarısız olursa rollback (öğrenci tekrar deneyebilsin)
-    try {
-      await sendStudentPasswordEmail({
-        to: targetEmail,
-        firstName,
-        schoolName,
-        password: newPassword,
-      });
-    } catch (mailErr) {
-      await client.query("ROLLBACK");
-      console.error("Şifre e-postası gönderilemedi:", mailErr.message);
-      return res.status(502).json({
-        success: false,
-        message: "E-posta gönderilemedi, lütfen biraz sonra tekrar deneyin",
-      });
-    }
-
-    await client.query("COMMIT");
-
-    return res.status(200).json({
-      success: true,
-      message: "Şifre e-posta adresine gönderildi",
-      email: maskEmail(targetEmail),
-    });
-  } catch (error) {
-    await client.query("ROLLBACK");
-    next(error);
-  } finally {
-    client.release();
-  }
-};
-
 module.exports = {
   parseStudentsFromWorkbook,
   upsertStudentWithMerge,
   registerStudent,
   loginStudent,
-  requestStudentPassword,
   createStudentReservation,
   getMyReservations,
   getStudents,

@@ -145,7 +145,9 @@ class _LoanBookPageState extends State<LoanBookPage> {
     }
   }
 
-  Future<String> getStudentNameForConfirmation(String studentNumber) async {
+  /// Seçilen seviyedeki AKTİF öğrenciler içinde numarayı arar.
+  /// Öğrenci yoksa boş map, liste alınamadıysa null döner.
+  Future<Map<String, dynamic>?> findStudentInSelectedLevel(String studentNumber) async {
     try {
       final students = await ApiService.getStudents(
         schoolCode: widget.schoolCode,
@@ -153,17 +155,21 @@ class _LoanBookPageState extends State<LoanBookPage> {
       );
       final matched = students.where((s) =>
           s["student_number"]?.toString().trim() == studentNumber).toList();
-      if (matched.isEmpty) return "-";
-      return matched.first["full_name"]?.toString() ?? "-";
+      if (matched.isEmpty) return <String, dynamic>{};
+      return matched.first;
     } catch (_) {
-      return "-";
+      return null;
     }
   }
+
+  String get selectedLevelLabel => schoolLevels
+      .firstWhere((l) => l["value"] == selectedLevel, orElse: () => {"label": selectedLevel})["label"]!;
 
   Future<bool> showLoanConfirmDialog({
     required String bookName,
     required String studentNumber,
     required String studentName,
+    required String studentClass,
   }) async {
     final result = await showDialog<bool>(
       context: context,
@@ -182,6 +188,8 @@ class _LoanBookPageState extends State<LoanBookPage> {
               Text("Öğrenci No: $studentNumber"),
               const SizedBox(height: 6),
               Text("Öğrenci Adı: $studentName"),
+              const SizedBox(height: 6),
+              Text("Sınıf: $studentClass · $selectedLevelLabel"),
             ],
           ),
           actions: [
@@ -233,14 +241,25 @@ class _LoanBookPageState extends State<LoanBookPage> {
         : "Kitap";
 
     setState(() { isLoading = true; statusMessage = "Öğrenci bilgisi kontrol ediliyor..."; });
-    final studentName = await getStudentNameForConfirmation(studentNumber);
+    final student = await findStudentInSelectedLevel(studentNumber);
     if (!mounted) return;
     setState(() { isLoading = false; statusMessage = ""; });
+
+    // Numara başka seviyede (ya da mezun bir öğrencide) olsa bile, seçilen
+    // seviyede aktif öğrenci yoksa işlem yapılmaz.
+    if (student != null && student.isEmpty) {
+      setState(() => statusMessage =
+          "$selectedLevelLabel seviyesinde $studentNumber numaralı aktif öğrenci yok. Okul seviyesini kontrol et.");
+      return;
+    }
+    final studentName = student?["full_name"]?.toString() ?? "-";
+    final studentClass = student?["class_name"]?.toString() ?? "-";
 
     final confirmed = await showLoanConfirmDialog(
       bookName: bookName,
       studentNumber: studentNumber,
       studentName: studentName,
+      studentClass: studentClass,
     );
     if (!mounted) return;
 
