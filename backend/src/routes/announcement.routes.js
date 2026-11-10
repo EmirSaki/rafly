@@ -21,10 +21,12 @@ const {
   createAnnouncement,
   deleteAnnouncement,
 } = require("../controllers/announcement.controller");
+const { requireStaff } = require("../middlewares/staff.middleware");
 
 router.get("/", getAnnouncements);
 router.get("/:id/images", getAnnouncementImages);
 router.post("/", upload.array("images", 10), createAnnouncement);
-router.delete("/:id", deleteAnnouncement);
+// Silme: personel oturumu gerekir ve yalnızca kendi okulunun duyurusu silinebilir.
+router.delete("/:id", requireStaff, deleteAnnouncement);
 
 module.exports = router;

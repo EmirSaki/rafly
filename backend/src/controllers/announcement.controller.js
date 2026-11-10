@@ -1,4 +1,5 @@
 const pool = require("../config/db");
+const { staffCanAccessSchool } = require("../middlewares/staff.middleware");
 
 async function ensureAnnouncementsTable(client) {
   try {
@@ -250,17 +251,26 @@ const deleteAnnouncement = async (req, res, next) => {
     try {
       await ensureAnnouncementsTable(client);
 
-      const result = await client.query(
-        "DELETE FROM public.announcements WHERE id = $1 RETURNING id",
+      const existing = await client.query(
+        "SELECT school_code FROM public.announcements WHERE id = $1",
         [id]
       );
 
-      if (result.rows.length === 0) {
+      if (existing.rows.length === 0) {
         return res.status(404).json({
           success: false,
           message: "Bilgilendirme bulunamadı",
         });
       }
+
+      if (!staffCanAccessSchool(req, existing.rows[0].school_code)) {
+        return res.status(403).json({
+          success: false,
+          message: "Yalnızca kendi okulunuzun bilgilendirmesini silebilirsiniz.",
+        });
+      }
+
+      await client.query("DELETE FROM public.announcements WHERE id = $1", [id]);
 
       return res.status(200).json({
         success: true,
