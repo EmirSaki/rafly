@@ -25,6 +25,19 @@ async function ensureStudentColumns(client, schemaName) {
   `);
 }
 
+// Oturum sahibi (personel/istasyon) yalnızca kendi okulunun ödünç kaydına
+// dokunabilir. Oturumsuz istekler (geçiş modu) eskisi gibi geçer; yetki kapısı
+// AUTH_MODE=enforce olduğunda onları zaten reddeder.
+function forbiddenForOtherSchool(req, res, schoolCode) {
+  const user = req.authUser;
+  if (!user || String(user.school_code) === String(schoolCode)) return false;
+  res.status(403).json({
+    success: false,
+    message: "Yalnızca kendi okulunuzun kayıtlarına erişebilirsiniz.",
+  });
+  return true;
+}
+
 function normalizeLevel(value) {
   return value && String(value).trim() !== ""
     ? String(value).trim().toLowerCase()
@@ -107,13 +120,15 @@ async function getPublicReservationColumns(client) {
 const getAllReservations = async (req, res, next) => {
   try {
     const {
-      schoolCode,
       status,
       studentNumber,
       school_level,
       startDate,
       endDate,
     } = req.query;
+    // Okul kodu verilmezse tüm okulların kayıtları döner; oturum varsa
+    // yalnızca kendi okuluna indirgenir.
+    const schoolCode = req.query.schoolCode || (req.authUser && req.authUser.school_code) || "";
 
     if (!schoolCode) {
       const params = [];
@@ -270,7 +285,7 @@ const getAllReservations = async (req, res, next) => {
 const getReservationById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { schoolCode } = req.query;
+    const schoolCode = req.query.schoolCode || (req.authUser && req.authUser.school_code) || "";
 
     if (!schoolCode) {
       const result = await pool.query(
@@ -837,6 +852,10 @@ const updateReservationStatus = async (req, res, next, targetStatus, message) =>
     }
 
     const reservation = reservationResult.rows[0];
+    if (forbiddenForOtherSchool(req, res, reservation.school_code)) {
+      await client.query("ROLLBACK");
+      return;
+    }
     const schemaName = `school_${reservation.school_code}`;
 
     await ensureSchoolReservationColumns(client, schemaName);
@@ -937,6 +956,10 @@ const returnReservation = async (req, res, next) => {
     }
 
     const publicReservation = publicReservationResult.rows[0];
+    if (forbiddenForOtherSchool(req, res, publicReservation.school_code)) {
+      await client.query("ROLLBACK");
+      return;
+    }
     const schemaName = `school_${publicReservation.school_code}`;
 
     await ensureSchoolReservationColumns(client, schemaName);
@@ -1149,6 +1172,7 @@ const deleteReservation = async (req, res, next) => {
 
 module.exports = {
   resolveActiveStudent,
+  forbiddenForOtherSchool,
   getAllReservations,
   getReservationById,
   createReservation,

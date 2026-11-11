@@ -78,3 +78,14 @@ test('transition mode lets old clients through, enforce mode blocks them', () =>
   assert.equal(run(req('GET', '/api/students', { auth: staff, query: { schoolCode: '764135' } }), 'enforce').passed, true);
   assert.equal(run(req('POST', '/api/students/login'), 'enforce').passed, true);
 });
+
+test('reservation updates refuse another school when a session is present', () => {
+  const { forbiddenForOtherSchool } = require('../src/controllers/reservation.controller');
+  const mk = () => ({ statusCode: 200, status(c) { this.statusCode = c; return this; }, json(b) { this.body = b; return this; } });
+  assert.equal(forbiddenForOtherSchool({ authUser: { school_code: '764135' } }, mk(), '764135'), false);
+  const other = mk();
+  assert.equal(forbiddenForOtherSchool({ authUser: { school_code: '764135' } }, other, '111'), true);
+  assert.equal(other.statusCode, 403);
+  // oturumsuz (geçiş modu) eskisi gibi geçer
+  assert.equal(forbiddenForOtherSchool({}, mk(), '111'), false);
+});
