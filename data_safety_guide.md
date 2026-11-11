@@ -1,9 +1,10 @@
 # Data Safety Form Rehberi - Play Console
 
-> 20 Ekim 2026 denetimi: Bu belge gönderilmiş bir Play Console beyanı değildir.
-> Yayınlanan uygulama, backend ve tüm SDK veri akışlarıyla doğrulanmalıdır.
-> Backend'de ortak öğrenci şifresi ve plain_password saklama tespit edildi;
-> HTTPS kullanılması bu güvenlik sorunlarını çözmez. Yayın öncesi giderilmelidir.
+> 11 Kasım 2026 güncellemesi: Bu belge gönderilmiş bir Play Console beyanı değildir;
+> formu bu rehbere bakarak siz doldurursunuz. Ortak öğrenci şifresi kaldırıldı
+> (öğrenciye özel şifre, ilk girişte belirlenir) ve düz metin şifre artık yazılmıyor.
+> Sunucu tarafı yetki zorunluluğu (AUTH_MODE=enforce) ayrıca açılmalıdır; aşağıdaki
+> "Yayın öncesi ek doğrulamalar" bölümüne bakın.
 
 Bu rehberi Play Console > Uygulama icerigi > Veri guvenligi bolumunde
 adim adim takip et.
@@ -145,10 +146,12 @@ politikasını sağlamalıdır. Önceki rehberin yalnız 13+ seçme önerisi yan
 
 ## Yayın öncesi ek doğrulamalar
 
-- Gizlilik metnine kapak, logo, duyuru görseli ve Excel veri akışlarını ekle.
-- Gizlilikteki yalnız bcrypt ile şifre saklama iddiası, backend'deki düz metin saklama giderilmeden doğru değildir.
-- Hesap silmeyi sentetik test hesabında ilişkili verilerle birlikte doğrula. Yedek saklama süresini ayrıca açıkla.
-- İncelemeciye ayrı test okulunda öğrenci ve yetkili hesapları, okul kodu ve kademe bilgisi sağla.
+- Gizlilik metni (11 Kasım 2026) kapak/logo/duyuru görseli, Excel, Google Cloud barındırması ve çocuk verisi akışlarını anlatır: `docs/privacy.html` canlı siteye yayımlanmış olmalı ve bu form ile aynı şeyi söylemeli.
+- Düz metin şifre yazımı kaldırıldı. Eski kayıtlarda kalmış değerleri sunucuda temizleyin: `UPDATE public.users SET plain_password = NULL;`
+- Öğrenci şifresi artık kişiye özel (bcrypt). Başlangıç şifresi yalnızca ilk giriş içindir; öğrenci kendi şifresini belirlemeden oturum açamaz.
+- Sunucuda `AUTH_MODE=enforce` açılana kadar yönetim uçları geçiş modundadır. Yeni uygulama sürümü yayında olduktan sonra açın; eski sürümler token göndermez.
+- Hesap silmeyi sentetik test hesabında ilişkili verilerle birlikte doğrulayın. Yedek saklama süresini ayrıca açıklayın.
+- İncelemeciye ayrı test okulunda öğrenci ve yetkili hesabı, okul kodu ve kademe bilgisi verin. Öğrenci hesabının şifresini önceden belirleyin.
 - Gizlilik URL: https://raflylib.online/privacy.html
 - Hesap silme URL: https://raflylib.online/hesap-silme.html
 
