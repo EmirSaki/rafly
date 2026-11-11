@@ -232,8 +232,8 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(8),
           child: Image.memory(
             Uint8List.fromList(bytes),
-            width: 40,
-            height: 40,
+            width: 112,
+            height: 112,
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) => _buildDefaultLogo(),
           ),
@@ -243,21 +243,26 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
+    if (_logoUrl != null && Uri.tryParse(_logoUrl!)?.hasScheme == true) {
+      return Image.network(_logoUrl!, width: 112, height: 112, fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) => _buildDefaultLogo());
+    }
+
     return _buildDefaultLogo();
   }
 
   Widget _buildDefaultLogo() {
     return Container(
-      width: 40,
-      height: 40,
+      width: 112,
+      height: 112,
       decoration: BoxDecoration(
         color: kPrimary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(56),
       ),
       child: const Icon(
         Icons.local_library_outlined,
         color: kPrimary,
-        size: 22,
+        size: 58,
       ),
     );
   }
@@ -267,38 +272,33 @@ class _HomePageState extends State<HomePage> {
     final fullName = '${widget.userName} ${widget.userSurname}'.trim();
 
     return Scaffold(
-      backgroundColor: kBackground,
+      backgroundColor: const Color(0xFFF6FAFF),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openWhatsApp,
-        backgroundColor: const Color(0xFF25D366),
+        backgroundColor: const Color(0xFF19B85E),
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.chat_rounded, size: 20),
+        icon: const Icon(Icons.chat_outlined, size: 23),
         label: const Text(
           'Bize Ulaşın',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+        child: Stack(children: [
+          Positioned(top: -160, left: -170, child: Container(width: 400, height: 290,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFB9DAFC)))),
+          Positioned(bottom: -190, left: -100, child: Container(width: 540, height: 270,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF62A7EE)))),
+          Positioned(bottom: -215, left: -95, child: Container(width: 460, height: 245,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF2375C9)))),
+          SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 130),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  _buildLogo(),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      _logoUrl != null ? widget.schoolName : "Rafly",
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: kPrimary,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
                   if (isTeacher && isDesktop)
                     _isUploadingLogo
                         ? const SizedBox(
@@ -317,64 +317,47 @@ class _HomePageState extends State<HomePage> {
                               minHeight: 36,
                             ),
                           ),
-                  IconButton(
+                  TextButton.icon(
                     onPressed: _confirmLogout,
-                    icon: const Icon(Icons.logout_rounded, size: 20),
-                    tooltip: "Çıkış Yap",
-                    color: kDestructive,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
+                    icon: const Icon(Icons.logout_rounded, size: 21),
+                    label: const Text('Çıkış Yap'),
+                    style: TextButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFFF05261),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: kSurface,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: kBorder),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 4),
+              Center(child: Column(
                   children: [
+                    GestureDetector(onTap: isTeacher && isDesktop ? _showLogoOptions : null,
+                      child: _buildLogo()),
+                    const SizedBox(height: 8),
                     Text(
-                      widget.schoolName.isNotEmpty ? widget.schoolName : "Hoşgeldiniz",
+                      widget.schoolName.isNotEmpty ? widget.schoolName : "Rafly",
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: kTextPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF071E52),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       "Okul Kodu: ${widget.schoolCode}",
-                      style: const TextStyle(fontSize: 13, color: kTextSecondary),
+                      style: const TextStyle(fontSize: 13, color: Color(0xFF68758F)),
                     ),
                     if (fullName.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
                         "$fullName${widget.userRole.isNotEmpty ? ' - ${widget.userRole}' : ''}",
-                        style: const TextStyle(fontSize: 13, color: kTextSecondary),
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF68758F)),
                       ),
                     ],
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              const Text(
-                "Hızlı Erişim",
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: kTextPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
               _buildMenuCard(
                 context,
                 icon: Icons.add_circle_outline,
@@ -389,7 +372,7 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               _buildMenuCard(
                 context,
                 icon: Icons.library_books_outlined,
@@ -404,7 +387,7 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               _buildMenuCard(
                 context,
                 icon: Icons.assignment_outlined,
@@ -419,7 +402,7 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               _buildMenuCard(
                 context,
                 icon: Icons.people_outline,
@@ -434,7 +417,7 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               _buildMenuCard(
                 context,
                 icon: Icons.campaign_outlined,
@@ -452,6 +435,7 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
+        ]),
       ),
     );
   }
@@ -464,29 +448,30 @@ class _HomePageState extends State<HomePage> {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: kSurface,
-      borderRadius: BorderRadius.circular(8),
+      color: Colors.white.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: kBorder),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: const [BoxShadow(color: Color(0x171B5CA8), blurRadius: 17, offset: Offset(0, 6))],
           ),
           child: Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 75,
+                height: 75,
                 decoration: BoxDecoration(
-                  color: kPrimary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
+                  color: title == 'Kitap Listesi' || title == 'Öğrenci Listesi'
+                      ? const Color(0xFF123B79) : const Color(0xFF388BE9),
+                  borderRadius: BorderRadius.circular(17),
                 ),
-                child: Icon(icon, color: kPrimary, size: 20),
+                child: Icon(icon, color: Colors.white, size: 37),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -494,20 +479,21 @@ class _HomePageState extends State<HomePage> {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: kTextPrimary,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF071E52),
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 5),
                     Text(
                       subtitle,
-                      style: const TextStyle(fontSize: 13, color: kTextSecondary),
+                      style: const TextStyle(fontSize: 12, color: Color(0xFF69758B)),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: kTextSecondary, size: 20),
+              Container(width: 35, height: 35, decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFE9F3FF)),
+                child: const Icon(Icons.chevron_right_rounded, color: Color(0xFF071E52), size: 28)),
             ],
           ),
         ),

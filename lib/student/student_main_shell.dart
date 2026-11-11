@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/student_auth_provider.dart';
-import '../main.dart';
 import 'student_home_screen.dart';
 import 'student_books_screen.dart';
 import 'student_reservations_screen.dart';
@@ -22,10 +21,16 @@ class _StudentMainShellState extends State<StudentMainShell> {
     final schoolCode = auth.schoolCode ?? '';
 
     final screens = [
-      const StudentHomeScreen(),
-      StudentBooksScreen(schoolCode: schoolCode),
-      const StudentReservationsScreen(),
-      const StudentProfileScreen(),
+      StudentHomeScreen(
+        onOpenHistory: () => setState(() => _idx = 2),
+        onOpenBooks: () => setState(() => _idx = 1),
+      ),
+      StudentBooksScreen(
+        schoolCode: schoolCode,
+        onBack: () => setState(() => _idx = 0),
+      ),
+      StudentReservationsScreen(onBack: () => setState(() => _idx = 0)),
+      StudentProfileScreen(onBack: () => setState(() => _idx = 0)),
     ];
 
     const labels = ['Anasayfa', 'Kitaplar', 'Geçmiş', 'Profil'];
@@ -40,22 +45,25 @@ class _StudentMainShellState extends State<StudentMainShell> {
       body: IndexedStack(index: _idx, children: screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: kSurface,
-          border: const Border(top: BorderSide(color: kBorder, width: 0.5)),
+          color: const Color(0xFFF7FAFF),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
+              color: const Color(0xFF8AA7D8).withValues(alpha: 0.18),
+              blurRadius: 18,
               offset: const Offset(0, -2),
             ),
           ],
         ),
         child: SafeArea(
           child: SizedBox(
-            height: 68,
+            height: 76,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(4, (i) => _tabItem(i, labels[i], icons[i])),
+              children: List.generate(
+                4,
+                (i) => _tabItem(i, labels[i], icons[i]),
+              ),
             ),
           ),
         ),
@@ -69,17 +77,33 @@ class _StudentMainShellState extends State<StudentMainShell> {
       onTap: () => setState(() => _idx = i),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 72,
+        width: 78,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 24, color: active ? kPrimary : kTextSecondary),
+            Container(
+              width: 64,
+              height: 40,
+              decoration: BoxDecoration(
+                color: active ? const Color(0xFFE7EEFF) : Colors.transparent,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Icon(
+                icon,
+                size: 26,
+                color: active
+                    ? const Color(0xFF0765EA)
+                    : const Color(0xFF5A74A4),
+              ),
+            ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
-                color: active ? kPrimary : kTextSecondary,
+                fontSize: 11,
+                color: active
+                    ? const Color(0xFF0765EA)
+                    : const Color(0xFF5A74A4),
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500,
               ),
             ),

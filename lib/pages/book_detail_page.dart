@@ -683,6 +683,14 @@ class _BookDetailPageState extends State<BookDetailPage> {
                               ? currentBook.isbn
                               : "Yok",
                         ),
+                        _buildReadOnlyField(
+                          "Raf Konumu",
+                          currentBook.shelves.isNotEmpty
+                              ? currentBook.shelves.join(", ")
+                              : (currentBook.shelf?.trim().isNotEmpty == true
+                                  ? currentBook.shelf!
+                                  : "Belirtilmemiş"),
+                        ),
                         _buildEditableField(
                           label: "Yazar(lar)",
                           controller: authorsController,

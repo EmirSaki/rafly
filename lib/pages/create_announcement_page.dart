@@ -168,30 +168,39 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Bildirim Gönder')),
-      backgroundColor: kBackground,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFEAF5FF),
+        toolbarHeight: 78,
+        title: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Bildirim Gönder', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF07164A))),
+          Text('Öğrencilere duyuru veya uyarı gönderebilirsiniz.', style: TextStyle(fontSize: 12, color: kTextSecondary)),
+        ]),
+        actions: const [Padding(padding: EdgeInsets.only(right: 18), child: Icon(Icons.campaign, color: Color(0xFF1269D8), size: 30))],
+      ),
+      backgroundColor: const Color(0xFFEAF5FF),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _label('Başlık'),
-            const SizedBox(height: 4),
+            _sectionHeading(Icons.description_outlined, 'Başlık', 'Duyuru başlığını girin.'),
+            const SizedBox(height: 8),
             TextField(
               controller: _titleController,
               decoration: const InputDecoration(hintText: 'Duyuru başlığı'),
             ),
-            const SizedBox(height: 16),
-            _label('İçerik'),
-            const SizedBox(height: 4),
+            const SizedBox(height: 24),
+            _sectionHeading(Icons.chat_bubble_outline, 'İçerik', 'Duyuru içeriğini girin.'),
+            const SizedBox(height: 8),
             TextField(
               controller: _contentController,
-              maxLines: 4,
-              decoration: const InputDecoration(hintText: 'Duyuru içeriği'),
+              maxLines: 5,
+              maxLength: 500,
+              decoration: const InputDecoration(hintText: 'Duyuru içeriği...', fillColor: Colors.white, filled: true),
             ),
             const SizedBox(height: 16),
-            _label('Hedef Kitle'),
-            const SizedBox(height: 4),
+            _sectionHeading(Icons.people_alt_outlined, 'Hedef Kitle', 'Bildirim gönderilecek öğrenci grubunu seçin.'),
+            const SizedBox(height: 8),
             DropdownButtonFormField<String>(
               initialValue: _targetType,
               items: _targetTypes.map((t) {
@@ -243,7 +252,9 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
                 ),
               ],
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            _sectionHeading(Icons.calendar_month_outlined, 'Tarih Aralığı', 'Bildirimde geçerli olacak tarih aralığını seçin.'),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -277,8 +288,8 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            _label('Fotoğraflar'),
+            const SizedBox(height: 24),
+            _sectionHeading(Icons.image_outlined, 'Fotoğraflar', 'Duyuruya görsel ekleyebilirsiniz (isteğe bağlı).'),
             const SizedBox(height: 8),
             if (_selectedImages.isNotEmpty) ...[
               SizedBox(
@@ -336,17 +347,23 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
               ),
               const SizedBox(height: 8),
             ],
-            OutlinedButton.icon(
-              onPressed: _pickImages,
-              icon: const Icon(Icons.add_photo_alternate_outlined),
-              label: Text(_selectedImages.isEmpty ? 'Fotoğraf Ekle' : 'Daha Fazla Ekle'),
-            ),
+            InkWell(onTap: _pickImages, child: Container(
+              width: double.infinity, height: 102,
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF9BC9F6)), color: Colors.white.withValues(alpha: .45)),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const Icon(Icons.add_photo_alternate_outlined, color: Color(0xFF1269D8), size: 30),
+                Text(_selectedImages.isEmpty ? 'Fotoğraf Ekle' : 'Daha Fazla Ekle', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF07164A))),
+                const Text('JPG, PNG formatında görseller ekleyebilirsiniz', style: TextStyle(fontSize: 11, color: kTextSecondary)),
+              ]),
+            )),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
+              child: ElevatedButton.icon(
                 onPressed: _isSending ? null : _send,
-                child: _isSending
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0753CD), foregroundColor: Colors.white, minimumSize: const Size.fromHeight(56), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                icon: const Icon(Icons.send),
+                label: _isSending
                     ? const SizedBox(
                         width: 18,
                         height: 18,
@@ -368,4 +385,13 @@ class _CreateAnnouncementPageState extends State<CreateAnnouncementPage> {
       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary),
     );
   }
+
+  Widget _sectionHeading(IconData icon, String title, String subtitle) => Row(children: [
+    Container(width: 44, height: 44, decoration: BoxDecoration(color: const Color(0xFFDDEEFF), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: const Color(0xFF0753CD))),
+    const SizedBox(width: 12),
+    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Color(0xFF07164A))),
+      Text(subtitle, style: const TextStyle(color: kTextSecondary, fontSize: 12)),
+    ])),
+  ]);
 }

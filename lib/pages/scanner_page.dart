@@ -21,6 +21,7 @@ class _ScannerPageState extends State<ScannerPage> {
   bool isScanned = false;
   bool isLoading = false;
   bool _isHandlingDetection = false;
+  bool _torchOn = false;
   Timer? notFoundTimer;
 
   String statusMessage = "Barkodu okut";
@@ -337,6 +338,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
   Widget buildScannerView() {
     return Stack(
+      fit: StackFit.expand,
       children: [
         MobileScanner(
           controller: scannerController,
@@ -351,35 +353,59 @@ class _ScannerPageState extends State<ScannerPage> {
             }
           },
         ),
-        Positioned(
-          left: 16,
-          right: 16,
-          top: 16,
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.black54,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              statusMessage,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
-            ),
-          ),
-        ),
-        const Center(
-          child: IgnorePointer(
-            child: Icon(
-              Icons.qr_code_scanner,
-              size: 120,
-              color: Colors.white54,
-            ),
-          ),
-        ),
+        SafeArea(child: Column(children: [
+          Padding(padding: const EdgeInsets.fromLTRB(14, 16, 14, 0), child: Row(children: [
+            Material(color: Colors.white, shape: const CircleBorder(), child: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF09255A)), iconSize: 23)),
+            const SizedBox(width: 12),
+            const Expanded(child: Text('Barkod Tarama', style: TextStyle(color: Colors.white,
+              fontSize: 18, fontWeight: FontWeight.w700))),
+            Material(color: const Color(0xB9000000), shape: const CircleBorder(), child: IconButton(
+              onPressed: () async {
+                await scannerController.toggleTorch();
+                if (mounted) setState(() => _torchOn = !_torchOn);
+              },
+              icon: Icon(_torchOn ? Icons.flashlight_on_rounded : Icons.flashlight_off_rounded,
+                color: Colors.white), iconSize: 26)),
+          ])),
+          const SizedBox(height: 13),
+          Container(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+            decoration: BoxDecoration(color: const Color(0xC9000000), borderRadius: BorderRadius.circular(13)),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              const Icon(Icons.view_week_rounded, color: Color(0xFF67B6FF), size: 23),
+              const SizedBox(width: 12),
+              Text(statusMessage, style: const TextStyle(color: Colors.white, fontSize: 14)),
+            ])),
+          const Spacer(),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 34),
+            child: AspectRatio(aspectRatio: 1.05, child: CustomPaint(painter: _ScanFramePainter()))),
+          const Spacer(),
+          Container(width: double.infinity, padding: const EdgeInsets.fromLTRB(30, 20, 24, 28),
+            decoration: const BoxDecoration(color: Color(0xCC221B1E),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Center(child: Container(width: 34, height: 4,
+                decoration: BoxDecoration(color: Colors.white38, borderRadius: BorderRadius.circular(4)))),
+              const SizedBox(height: 15),
+              const Row(children: [Icon(Icons.info_rounded, color: Color(0xFF2288F7), size: 27),
+                SizedBox(width: 12), Text('Barkod Tarama İpuçları',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700))]),
+              const SizedBox(height: 12),
+              _tip('Kitabın arkasındaki ISBN barkodunu okutun.'),
+              _tip('Barkodu çerçeve içine hizalayın.'),
+              _tip('Ortamın yeterince aydınlık olmasına dikkat edin.'),
+            ])),
+        ])),
         if (isLoading) const Center(child: CircularProgressIndicator()),
       ],
     );
   }
+
+  Widget _tip(String text) => Padding(padding: const EdgeInsets.only(left: 42, bottom: 8),
+    child: Row(children: [const Icon(Icons.check_circle_rounded, color: Color(0xFF318BE5), size: 21),
+      const SizedBox(width: 10), Expanded(child: Text(text,
+        style: const TextStyle(color: Color(0xFFE4E0E2), fontSize: 12)))]));
 
   Widget _buildFormField({
     required String label,
@@ -589,7 +615,6 @@ class _ScannerPageState extends State<ScannerPage> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        appBar: AppBar(title: const Text("Barkod Tarama")),
         body: Stack(
           fit: StackFit.expand,
           children: [
@@ -603,4 +628,35 @@ class _ScannerPageState extends State<ScannerPage> {
       ),
     );
   }
+}
+
+class _ScanFramePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final corner = Paint()..color = Colors.white..strokeWidth = 10
+      ..strokeCap = StrokeCap.round..style = PaintingStyle.stroke;
+    const length = 36.0;
+    const inset = 8.0;
+    for (final x in [inset, size.width - inset]) {
+      for (final y in [inset, size.height - inset]) {
+        final dx = x == inset ? 1.0 : -1.0;
+        final dy = y == inset ? 1.0 : -1.0;
+        final path = Path()..moveTo(x, y + length * dy)..lineTo(x, y)
+          ..lineTo(x + length * dx, y);
+        canvas.drawPath(path, corner);
+      }
+    }
+    final bars = Paint()..color = Colors.white..strokeWidth = 6..strokeCap = StrokeCap.round;
+    final start = size.width * .30;
+    for (var i = 0; i < 11; i++) {
+      final x = start + i * size.width * .04;
+      canvas.drawLine(Offset(x, size.height * .37), Offset(x, size.height * .63), bars);
+    }
+    final line = Paint()..color = const Color(0xFF69B9FF)..strokeWidth = 3;
+    canvas.drawLine(Offset(size.width * .26, size.height / 2),
+      Offset(size.width * .74, size.height / 2), line);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

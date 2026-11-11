@@ -252,6 +252,7 @@ const getAllReservations = async (req, res, next) => {
         sr.book_id,
         b.book_name,
         b.isbn,
+        b.cover_url,
         st.full_name AS student_name,
         COALESCE(sr.student_number, st.student_number) AS student_number,
         st.class_name,

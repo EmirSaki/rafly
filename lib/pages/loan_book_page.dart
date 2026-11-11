@@ -421,31 +421,66 @@ class _LoanBookPageState extends State<LoanBookPage> {
     );
   }
 
+  Widget _fieldHeader(IconData icon, String title, String hint) => Row(children: [
+    Container(width: 43, height: 43,
+      decoration: BoxDecoration(color: const Color(0xFFE2F2FF), borderRadius: BorderRadius.circular(11)),
+      child: Icon(icon, color: const Color(0xFF0D3C9A), size: 24)),
+    const SizedBox(width: 12),
+    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+        color: Color(0xFF071E52))),
+      Text(hint, style: const TextStyle(fontSize: 11, color: Color(0xFF71809A))),
+    ])),
+  ]);
+
   @override
   Widget build(BuildContext context) {
     final busy = isLoading || isLoaning;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Kitap Ver"),
+        toolbarHeight: 76,
+        backgroundColor: const Color(0xFFEEF7FF),
+        surfaceTintColor: Colors.transparent,
+        leadingWidth: 72,
+        leading: Padding(padding: const EdgeInsets.only(left: 12), child: Material(
+          color: Colors.white, shape: const CircleBorder(), elevation: 4,
+          child: IconButton(onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF09275F))))),
+        centerTitle: true,
+        title: const Text('Kitap Ver', style: TextStyle(fontSize: 23,
+          fontWeight: FontWeight.w800, color: Color(0xFF071E52))),
         actions: [
-          IconButton(
+          Padding(padding: const EdgeInsets.only(right: 12), child: Material(
+            color: Colors.white, shape: const CircleBorder(), elevation: 4,
+            child: IconButton(
             onPressed: busy ? null : clearForm,
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded, color: Color(0xFF1238C9)),
             tooltip: "Temizle",
-          ),
+          ))),
         ],
       ),
-      backgroundColor: kBackground,
+      backgroundColor: const Color(0xFFEEF7FF),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Stack(children: [
+          Positioned(bottom: -135, left: -110, child: Container(width: 560, height: 260,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFBBDEFC)))),
+          Positioned(bottom: -167, left: -110, child: Container(width: 560, height: 250,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF70B2F0)))),
+          Positioned(bottom: -200, left: -115, child: Container(width: 560, height: 240,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF2D82D6)))),
+          SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(12, 20, 12, 125),
+          child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 18, 14, 18),
+          decoration: BoxDecoration(color: const Color(0xFFFAFCFF),
+            borderRadius: BorderRadius.circular(19), border: Border.all(color: Colors.white),
+            boxShadow: const [BoxShadow(color: Color(0x295C9DD9), blurRadius: 18, offset: Offset(0, 8))]),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("ISBN",
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary)),
-              const SizedBox(height: 4),
+              _fieldHeader(Icons.view_week_rounded, 'ISBN', 'Kitabın ISBN numarasını girin'),
+              const SizedBox(height: 8),
               TextField(
                 controller: isbnController,
                 enabled: !busy,
@@ -453,6 +488,11 @@ class _LoanBookPageState extends State<LoanBookPage> {
                 textCapitalization: TextCapitalization.characters,
                 decoration: InputDecoration(
                   hintText: "9786258400069",
+                  filled: true, fillColor: Colors.white,
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(11),
+                    borderSide: const BorderSide(color: Color(0xFFE1E8F3))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(11),
+                    borderSide: const BorderSide(color: Color(0xFF7AB7F1), width: 1.5)),
                   suffixIcon: IconButton(
                     tooltip: "Barkod tara",
                     icon: const Icon(Icons.photo_camera_outlined, size: 20),
@@ -466,25 +506,35 @@ class _LoanBookPageState extends State<LoanBookPage> {
                 },
                 onSubmitted: (_) { if (!busy) fetchBookPreview(); },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
-                height: 44,
+                height: 49,
                 child: OutlinedButton.icon(
                   onPressed: busy ? null : fetchBookPreview,
+                  style: OutlinedButton.styleFrom(backgroundColor: const Color(0xFFD9EAFE),
+                    foregroundColor: const Color(0xFF092A73),
+                    side: const BorderSide(color: Colors.white, width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                   icon: isLoading
                       ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.search, size: 18),
-                  label: Text(isLoading ? "Kitap Aranıyor..." : "Kitabı Getir"),
+                      : const Icon(Icons.search_rounded, size: 23),
+                  label: Text(isLoading ? "Kitap Aranıyor..." : "Kitabı Getir",
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ),
               _buildBookPreviewCard(),
               const SizedBox(height: 16),
-              const Text("Okul Seviyesi",
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary)),
-              const SizedBox(height: 4),
+              const Divider(height: 30, color: Color(0xFFE7EFF9)),
+              _fieldHeader(Icons.school_outlined, 'Okul Seviyesi', 'Öğrencinin okul seviyesini seçin'),
+              const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: selectedLevel,
+                decoration: InputDecoration(filled: true, fillColor: Colors.white,
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(11),
+                    borderSide: const BorderSide(color: Color(0xFFE1E8F3))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(11),
+                    borderSide: const BorderSide(color: Color(0xFF7AB7F1), width: 1.5))),
                 items: schoolLevels.map((level) {
                   return DropdownMenuItem<String>(
                     value: level["value"],
@@ -497,34 +547,36 @@ class _LoanBookPageState extends State<LoanBookPage> {
                 },
               ),
               const SizedBox(height: 14),
-              const Text("Öğrenci Numarası",
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary)),
-              const SizedBox(height: 4),
+              const Divider(height: 30, color: Color(0xFFE7EFF9)),
+              _fieldHeader(Icons.person_outline_rounded, 'Öğrenci Numarası', 'Öğrenci numarasını girin'),
+              const SizedBox(height: 8),
               TextField(
                 controller: studentNumberController,
                 enabled: !busy,
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(hintText: "1001"),
+                decoration: InputDecoration(hintText: "1001", filled: true, fillColor: Colors.white,
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(11),
+                    borderSide: const BorderSide(color: Color(0xFFE1E8F3))),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(11),
+                    borderSide: const BorderSide(color: Color(0xFF7AB7F1), width: 1.5))),
               ),
               const SizedBox(height: 14),
-              const Text("İade Tarihi",
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary)),
-              const SizedBox(height: 4),
+              const Divider(height: 30, color: Color(0xFFE7EFF9)),
+              _fieldHeader(Icons.calendar_month_outlined, 'İade Tarihi', 'Tahmini iade tarihini seçin'),
+              const SizedBox(height: 8),
               GestureDetector(
                 onTap: busy ? null : pickDueDate,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                   decoration: BoxDecoration(
-                    color: kSurface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: kBorder),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: const Color(0xFFE1E8F3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today, size: 18, color: kTextSecondary),
-                      const SizedBox(width: 10),
                       Text(
                         dueDate != null ? formatDateTimeForView(dueDate!) : "Tarih seçin",
                         style: TextStyle(
@@ -532,20 +584,28 @@ class _LoanBookPageState extends State<LoanBookPage> {
                           color: dueDate != null ? kTextPrimary : kTextSecondary,
                         ),
                       ),
+                      const Spacer(),
+                      const Icon(Icons.calendar_month_outlined, size: 20, color: Color(0xFF173A83)),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               SizedBox(
                 width: double.infinity,
-                height: 48,
-                child: ElevatedButton.icon(
+                height: 54,
+                child: ElevatedButton(
                   onPressed: busy ? null : loanBook,
-                  icon: isLoaning
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0754BD),
+                    foregroundColor: Colors.white, elevation: 5,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  child: isLoaning
                       ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.assignment_turned_in, size: 18),
-                  label: Text(isLoaning ? "Kitap Veriliyor..." : "Kitabı Öğrenciye Ver"),
+                      : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                          Icon(Icons.check_circle, size: 22), SizedBox(width: 9),
+                          Flexible(child: Text('Kitabı Öğrenciye Ver',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700))),
+                          SizedBox(width: 6), Icon(Icons.chevron_right_rounded, size: 24)]),
                 ),
               ),
               if (statusMessage.isNotEmpty)
@@ -557,7 +617,9 @@ class _LoanBookPageState extends State<LoanBookPage> {
               _buildLastLoanCard(),
             ],
           ),
+          ),
         ),
+        ]),
       ),
     );
   }

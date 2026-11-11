@@ -19,7 +19,7 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
   bool _loading = false;
   bool _obscure = true;
 
-  final _levels = const ['ilkokul', 'ortaokul', 'lise', 'hazırlık', 'diğer'];
+  final _levels = const ['ilkokul', 'ortaokul', 'lise', 'diğer'];
   final _levelLabels = const {
     'ilkokul': 'İlkokul',
     'ortaokul': 'Ortaokul',
@@ -74,175 +74,343 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: kDestructive),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: kDestructive));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBackground,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.school_outlined, size: 48, color: kPrimary),
-                const SizedBox(height: 12),
-                const Text(
-                  'Rafly',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: kPrimary),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Öğrenci Paneli',
-                  style: TextStyle(fontSize: 14, color: kTextSecondary),
-                ),
-                const SizedBox(height: 32),
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: kSurface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: kBorder),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2)),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Giriş Yap',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: kTextPrimary),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Devam etmek için bilgilerinizi girin',
-                        style: TextStyle(fontSize: 13, color: kTextSecondary),
-                      ),
-                      const SizedBox(height: 20),
-
-                      _fieldLabel('Okul Kodu'),
-                      TextField(
-                        controller: _schoolCodeCtrl,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(12),
-                        ],
-                        decoration: const InputDecoration(hintText: 'Okul kodunu girin'),
-                      ),
-                      const SizedBox(height: 14),
-
-                      _fieldLabel('Okul Seviyesi'),
-                      _levelSelector(),
-                      const SizedBox(height: 14),
-
-                      _fieldLabel('Öğrenci Numarası'),
-                      TextField(
-                        controller: _studentNumberCtrl,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        decoration: const InputDecoration(hintText: '1234'),
-                      ),
-                      const SizedBox(height: 14),
-
-                      _fieldLabel('Şifre'),
-                      TextField(
-                        controller: _passwordCtrl,
-                        obscureText: _obscure,
-                        decoration: InputDecoration(
-                          hintText: 'Şifrenizi girin',
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                              color: kTextSecondary,
-                              size: 20,
-                            ),
-                            onPressed: () => setState(() => _obscure = !_obscure),
+      resizeToAvoidBottomInset: false,
+      backgroundColor: const Color(0xFFEDF0F8),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth;
+          final diameter = width * 1.06;
+          return Stack(
+            children: [
+              Positioned(
+                top: -diameter * .70,
+                left: -diameter * .63,
+                child: _LoginCircle(diameter: diameter),
+              ),
+              Positioned(
+                bottom: -diameter * .82,
+                right: -diameter * .62,
+                child: _LoginCircle(diameter: diameter),
+              ),
+              SafeArea(
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(16, 24, 16,
+                      MediaQuery.viewInsetsOf(context).bottom + 24),
+                    child: Container(
+                      width: double.infinity,
+                      constraints: const BoxConstraints(maxWidth: 510),
+                      padding: const EdgeInsets.fromLTRB(32, 42, 32, 48),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFFF1F3FA),
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0xAAFFFFFF),
+                            blurRadius: 22,
+                            offset: Offset(-12, -12),
                           ),
-                        ),
-                        onSubmitted: (_) {
-                          if (!_loading) _handleLogin();
-                        },
+                          BoxShadow(
+                            color: Color(0x77608BE6),
+                            blurRadius: 30,
+                            offset: Offset(16, 20),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'İlk girişte şifre: 1234. Ardından kendi şifreni belirlersin.',
-                        style: TextStyle(fontSize: 12, color: kTextSecondary),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Center(
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.school_outlined,
+                                  size: 37,
+                                  color: Color(0xFF092E6F),
+                                ),
+                                Text(
+                                  'Rafly',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w800,
+                                    color: Color(0xFF092E6F),
+                                  ),
+                                ),
+                                Text(
+                                  'Öğrenci Paneli',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF7D8495),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          const Text(
+                            'Giriş Yap',
+                            style: TextStyle(
+                              fontSize: 23,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF092E6F),
+                            ),
+                          ),
+                          const Text(
+                            'Devam etmek için bilgilerinizi girin.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF7D8495),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _fieldLabel('Okul Kodu'),
+                          _input(
+                            _schoolCodeCtrl,
+                            Icons.apartment_outlined,
+                            'Okul kodunu girin',
+                            keyboard: TextInputType.number,
+                            formatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(12),
+                            ],
+                          ),
+                          const SizedBox(height: 11),
+                          _fieldLabel('Okul Seviyesi'),
+                          _levelSelector(),
+                          const SizedBox(height: 11),
+                          _fieldLabel('Öğrenci Numarası'),
+                          _input(
+                            _studentNumberCtrl,
+                            Icons.tag,
+                            '1234',
+                            keyboard: TextInputType.number,
+                            formatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                          ),
+                          const SizedBox(height: 11),
+                          _fieldLabel('Şifre'),
+                          _input(
+                            _passwordCtrl,
+                            Icons.lock_outline_rounded,
+                            'Şifrenizi girin',
+                            obscure: _obscure,
+                            suffix: IconButton(
+                              icon: Icon(
+                                _obscure
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: const Color(0xFF092E6F),
+                                size: 20,
+                              ),
+                              onPressed: () =>
+                                  setState(() => _obscure = !_obscure),
+                            ),
+                            onSubmitted: (_) {
+                              if (!_loading) _handleLogin();
+                            },
+                          ),
+                          const SizedBox(height: 5),
+                          const Text(
+                            'İlk girişte şifre: 1234. Ardından kendi şifreni belirlersin.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF929AB0),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 53,
+                            child: ElevatedButton(
+                              onPressed: _loading ? null : _handleLogin,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0862E9),
+                                foregroundColor: Colors.white,
+                                shape: const StadiumBorder(),
+                                elevation: 11,
+                                shadowColor: const Color(0xFF3B7FF0),
+                              ),
+                              child: _loading
+                                  ? const CircularProgressIndicator(
+                                      color: Colors.white,
+                                    )
+                                  : const Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Giriş Yap',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                        CircleAvatar(
+                                          backgroundColor: Color(0xFF2879F0),
+                                          child: Icon(
+                                            Icons.arrow_forward_rounded,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 20),
-
-                      SizedBox(
-                        width: double.infinity,
-                        height: 44,
-                        child: ElevatedButton(
-                          onPressed: _loading ? null : _handleLogin,
-                          child: _loading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Text('Giriş Yap'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _fieldLabel(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(
-          text,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary),
-        ),
-      );
-
-  Widget _levelSelector() => Container(
-        decoration: BoxDecoration(
-          color: kMuted,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: kBorder),
-        ),
-        child: Row(
-          children: _levels.map((level) {
-            final selected = _schoolLevel == level;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _schoolLevel = level),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                    color: selected ? kPrimary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  child: Text(
-                    _levelLabels[level] ?? level,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected ? Colors.white : kTextSecondary,
                     ),
                   ),
                 ),
               ),
-            );
-          }).toList(),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _input(
+    TextEditingController controller,
+    IconData icon,
+    String hint, {
+    TextInputType? keyboard,
+    List<TextInputFormatter>? formatters,
+    bool obscure = false,
+    Widget? suffix,
+    ValueChanged<String>? onSubmitted,
+  }) => Container(
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(32),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x556E8DC9),
+          blurRadius: 13,
+          offset: Offset(3, 8),
         ),
-      );
+        BoxShadow(color: Colors.white, blurRadius: 8, offset: Offset(-5, -5)),
+      ],
+    ),
+    child: TextField(
+      controller: controller,
+      keyboardType: keyboard,
+      inputFormatters: formatters,
+      obscureText: obscure,
+      onSubmitted: onSubmitted,
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon, color: const Color(0xFF156BE2)),
+        suffixIcon: suffix,
+        filled: true,
+        fillColor: const Color(0xFFF8FAFF),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(32),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    ),
+  );
+
+  Widget _fieldLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: kTextPrimary,
+      ),
+    ),
+  );
+
+  Widget _levelSelector() => Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFFF8FAFF),
+      borderRadius: BorderRadius.circular(32),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x557A98CE),
+          blurRadius: 11,
+          offset: Offset(3, 7),
+        ),
+      ],
+    ),
+    child: Row(
+      children: _levels.map((level) {
+        final selected =
+            _schoolLevel == level ||
+            (level == 'diğer' && _schoolLevel == 'hazırlık');
+        return Expanded(
+          child: GestureDetector(
+            onTap: () async {
+              if (level != 'diğer') {
+                setState(() => _schoolLevel = level);
+                return;
+              }
+              final choice = await showModalBottomSheet<String>(
+                context: context,
+                builder: (context) => SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        title: const Text('Diğer'),
+                        onTap: () => Navigator.pop(context, 'diğer'),
+                      ),
+                      ListTile(
+                        title: const Text('Hazırlık'),
+                        onTap: () => Navigator.pop(context, 'hazırlık'),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+              if (choice != null && mounted) {
+                setState(() => _schoolLevel = choice);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: selected ? const Color(0xFF0862E9) : Colors.transparent,
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: selected
+                    ? const [
+                        BoxShadow(
+                          color: Color(0x88447EEC),
+                          blurRadius: 10,
+                          offset: Offset(2, 5),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Text(
+                _levelLabels[level] ?? level,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? Colors.white : kTextSecondary,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    ),
+  );
 
   @override
   void dispose() {
@@ -251,4 +419,27 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
     _passwordCtrl.dispose();
     super.dispose();
   }
+}
+
+class _LoginCircle extends StatelessWidget {
+  final double diameter;
+  const _LoginCircle({required this.diameter});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: diameter,
+    height: diameter,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: const Color(0xFFF0F2F9),
+      border: Border.all(color: Colors.white, width: 2),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x556B94E5),
+          blurRadius: 22,
+          offset: Offset(9, 12),
+        ),
+      ],
+    ),
+  );
 }

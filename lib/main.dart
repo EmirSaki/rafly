@@ -93,6 +93,16 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => ColoredBox(
+        color: const Color(0xFFF6FAFF),
+        child: SafeArea(
+          top: false,
+          minimum: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom == 0 ? 12 : 0,
+          ),
+          child: child ?? const SizedBox.shrink(),
+        ),
+      ),
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -276,78 +286,63 @@ class RoleSelectionPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBackground,
+      backgroundColor: const Color(0xFFFCFCFE),
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.local_library_outlined, size: 56, color: kPrimary),
-                const SizedBox(height: 14),
-                const Text(
-                  'Rafly',
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, color: kPrimary),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Kütüphane Yönetim Sistemi',
-                  style: TextStyle(fontSize: 14, color: kTextSecondary),
-                ),
-                const SizedBox(height: 48),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Giriş türünüzü seçin',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: kTextPrimary),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                _RoleCard(
-                  icon: Icons.person_outlined,
-                  title: 'Yetkili Girişi',
-                  subtitle: 'Kitap ekleme, ödünç verme, öğrenci yönetimi',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SchoolLoginPage()),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-                _RoleCard(
-                  icon: Icons.school_outlined,
-                  title: 'Öğrenci/Öğretmen Girişi',
-                  subtitle: 'Kitap listesi, rezervasyonlar, profil',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const StudentAuthGate()),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 48),
-                Wrap(
-                  alignment: WrapAlignment.center,
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
                   children: [
+                    SizedBox(height: constraints.maxHeight * .15),
+                    const Icon(Icons.menu_book_rounded, size: 72, color: Color(0xFF092E6F)),
+                    const SizedBox(height: 2),
+                    const Text('Rafly', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800, color: Color(0xFF092E6F))),
+                    const SizedBox(height: 3),
+                    const Text('Kütüphane Yönetim Sistemi', style: TextStyle(fontSize: 14, color: Color(0xFF75819C))),
+                    const SizedBox(height: 20),
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Container(width: 28, height: 5, decoration: BoxDecoration(color: const Color(0xFF1879F3), borderRadius: BorderRadius.circular(8))),
+                      const SizedBox(width: 6),
+                      Container(width: 28, height: 5, decoration: BoxDecoration(color: const Color(0xFFDCE7FA), borderRadius: BorderRadius.circular(8))),
+                    ]),
+                    const SizedBox(height: 28),
+                    const Text('Giriş türünüzü seçin', textAlign: TextAlign.center, style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800, color: Color(0xFF071C49))),
+                    const SizedBox(height: 7),
+                    const Text('Devam etmek için size uygun olan\ngiriş türünü seçin.', textAlign: TextAlign.center, style: TextStyle(fontSize: 15, height: 1.4, color: Color(0xFF75819C))),
+                    const SizedBox(height: 26),
+                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Expanded(child: _RoleCard(
+                        icon: Icons.person_outline_rounded,
+                        title: 'Yetkili Girişi',
+                        subtitle: 'Kitap ekleme, ödünç verme, öğrenci yönetimi',
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SchoolLoginPage())),
+                      )),
+                      const SizedBox(width: 10),
+                      Expanded(child: _RoleCard(
+                        icon: Icons.school_outlined,
+                        title: 'Öğrenci/Öğretmen Girişi',
+                        subtitle: 'Kitap listesi, rezervasyonlar, profil',
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentAuthGate())),
+                      )),
+                    ]),
+                    SizedBox(height: constraints.maxHeight * .11),
                     TextButton(
-                      onPressed: () => _openPolicy(context, 'privacy.html'),
-                      child: const Text('Gizlilik Politikası'),
+                      onPressed: () => showModalBottomSheet<void>(context: context, builder: (sheetContext) => SafeArea(
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          ListTile(title: const Text('Gizlilik Politikası'),
+                            onTap: () { Navigator.pop(sheetContext); _openPolicy(context, 'privacy.html'); }),
+                          ListTile(title: const Text('Hesap Silme'),
+                            onTap: () { Navigator.pop(sheetContext); _openPolicy(context, 'hesap-silme.html'); }),
+                        ]))),
+                      child: const Text('Rafly v1.0.2', style: TextStyle(fontSize: 12, color: Color(0xFF75819C))),
                     ),
-                    TextButton(
-                      onPressed: () => _openPolicy(context, 'hesap-silme.html'),
-                      child: const Text('Hesap Silme'),
-                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
-                const Text(
-                  'Rafly v1.0.2',
-                  style: TextStyle(fontSize: 11, color: kTextSecondary),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -387,53 +382,31 @@ class _RoleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: kSurface,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: kBorder),
-            boxShadow: const [
-              BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2)),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: kPrimary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: kPrimary, size: 26),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: kTextPrimary),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(fontSize: 13, color: kTextSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: kTextSecondary, size: 22),
-            ],
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        height: 250,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: const Color(0xFFCCE3FC)),
+          gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFD8EBFF), Color(0xFFB7D9FD), Color(0xFFE9F5FF)]),
+          boxShadow: const [BoxShadow(color: Color(0x294A94DD), blurRadius: 20, offset: Offset(0, 12))],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 56, color: const Color(0xFF08265B)),
+            const SizedBox(height: 12),
+            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.black, height: 1.2)),
+            const SizedBox(height: 12),
+            Expanded(child: Center(child: Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, height: 1.35, color: Color(0xFF405675))))),
+            Container(
+              width: 52, height: 52,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFF9FBFF), boxShadow: [BoxShadow(color: Color(0x263A83CE), blurRadius: 15, offset: Offset(0, 7))]),
+              child: const Icon(Icons.arrow_forward_rounded, color: Color(0xFF1680F9), size: 28),
+            ),
+          ],
         ),
       ),
     );

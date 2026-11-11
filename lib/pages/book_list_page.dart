@@ -318,7 +318,7 @@ class _BookListPageState extends State<BookListPage> {
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: TextField(
         controller: searchController,
         keyboardType: TextInputType.text,
@@ -330,8 +330,15 @@ class _BookListPageState extends State<BookListPage> {
           ),
         ],
         decoration: InputDecoration(
-          hintText: 'Kitap adı veya yazar ara...',
-          prefixIcon: const Icon(Icons.search, color: kTextSecondary),
+          hintText: 'Kitap adı, yazar veya ISBN ara...',
+          hintStyle: const TextStyle(color: Color(0xFF5E7093), fontSize: 14),
+          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF46618F), size: 26),
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: .92),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFD9E8F8))),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF76B8F7), width: 1.5)),
           suffixIcon: searchController.text.isNotEmpty
               ? IconButton(
                   icon: const Icon(Icons.clear, color: kTextSecondary),
@@ -345,46 +352,35 @@ class _BookListPageState extends State<BookListPage> {
 
   Widget _buildTotalQuantityCard() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
         decoration: BoxDecoration(
-          color: kSurface,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: kBorder),
+          gradient: const LinearGradient(colors: [Color(0xFFF8FCFF), Color(0xFFD1E8FF), Color(0xFFC2E1FF)]),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white),
+          boxShadow: const [BoxShadow(color: Color(0x28558FD0), blurRadius: 13, offset: Offset(0, 5))],
         ),
         child: Row(
           children: [
             Container(
-              width: 36,
-              height: 36,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
-                color: kPrimary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
+                color: const Color(0xFFC7E4FF),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.library_books_outlined,
-                  color: kPrimary, size: 18),
+                  color: Color(0xFF1269C8), size: 26),
             ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                "Toplam Kitap Adedi",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: kTextSecondary,
-                ),
-              ),
-            ),
-            Text(
-              "$totalQuantity",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: kTextPrimary,
-              ),
-            ),
+            const SizedBox(width: 16),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Toplam Kitap Adedi', style: TextStyle(fontSize: 13, color: Color(0xFF102E67))),
+              Text('$totalQuantity', style: const TextStyle(fontSize: 27, fontWeight: FontWeight.w800,
+                color: Color(0xFF071E52))),
+            ])),
+            const Icon(Icons.auto_stories_rounded, size: 65, color: Color(0xFF267FDB)),
           ],
         ),
       ),
@@ -396,23 +392,19 @@ class _BookListPageState extends State<BookListPage> {
     final canGoNext = currentPage < totalPages && !isLoading;
 
     return Container(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 8,
-        bottom: MediaQuery.of(context).padding.bottom + 8,
-      ),
-      decoration: const BoxDecoration(
-        color: kSurface,
-        border: Border(top: BorderSide(color: kBorder)),
-      ),
+      margin: const EdgeInsets.fromLTRB(8, 4, 8, 10),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15),
+        boxShadow: const [BoxShadow(color: Color(0x22558FD0), blurRadius: 16, offset: Offset(0, 5))]),
       child: Row(
         children: [
           Expanded(
-            child: OutlinedButton.icon(
+            child: TextButton.icon(
               onPressed:
                   canGoPrevious ? () => loadBooks(page: currentPage - 1) : null,
-              icon: const Icon(Icons.chevron_left, size: 18),
+              style: TextButton.styleFrom(backgroundColor: const Color(0xFFE8F4FF),
+                foregroundColor: const Color(0xFF4770A2), padding: const EdgeInsets.symmetric(vertical: 13)),
+              icon: const Icon(Icons.chevron_left, size: 22),
               label: const Text("Önceki"),
             ),
           ),
@@ -421,17 +413,19 @@ class _BookListPageState extends State<BookListPage> {
             "Sayfa $currentPage / $totalPages",
             style: const TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: kTextSecondary,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0B2A66),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: OutlinedButton.icon(
+            child: TextButton(
               onPressed:
                   canGoNext ? () => loadBooks(page: currentPage + 1) : null,
-              icon: const Icon(Icons.chevron_right, size: 18),
-              label: const Text("Sonraki"),
+              style: TextButton.styleFrom(backgroundColor: const Color(0xFF0A5BB9),
+                foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 13)),
+              child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text('Sonraki'), SizedBox(width: 4), Icon(Icons.chevron_right, size: 22)]),
             ),
           ),
         ],
@@ -441,14 +435,14 @@ class _BookListPageState extends State<BookListPage> {
 
   Widget _buildCoverThumb(Book book) {
     final url = (book.coverUrl ?? "").trim();
-    const double w = 46, h = 62;
+    const double w = 62, h = 74;
 
     Widget placeholder() => Container(
           width: w,
           height: h,
           decoration: BoxDecoration(
             color: kPrimary.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: kBorder),
           ),
           child: const Icon(Icons.menu_book_outlined,
@@ -458,7 +452,7 @@ class _BookListPageState extends State<BookListPage> {
     if (url.isEmpty) return placeholder();
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(8),
       child: Image.network(
         url,
         width: w,
@@ -492,12 +486,12 @@ class _BookListPageState extends State<BookListPage> {
     final isOutOfStock = availableQuantity <= 0;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       child: Material(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(8),
+        color: const Color(0xFFDDEEFF),
+        borderRadius: BorderRadius.circular(13),
         child: InkWell(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(13),
           onTap: book.bookId == null
               ? null
               : () async {
@@ -515,17 +509,18 @@ class _BookListPageState extends State<BookListPage> {
                   if (mounted) await refreshBooks();
                 },
           child: Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(13),
               border: Border.all(
                 color: isOutOfStock
                     ? kDestructive.withValues(alpha: 0.3)
-                    : kBorder,
+                    : Colors.white,
               ),
+              boxShadow: const [BoxShadow(color: Color(0x1E5F9AD1), blurRadius: 10, offset: Offset(0, 4))],
             ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _buildCoverThumb(book),
                 const SizedBox(width: 12),
@@ -539,28 +534,29 @@ class _BookListPageState extends State<BookListPage> {
                             : 'Bilinmeyen Kitap',
                         query,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
-                          const Text("Yazar: ",
-                              style: TextStyle(
-                                  fontSize: 13, color: kTextSecondary)),
+                          const Icon(Icons.person, size: 13, color: Color(0xFF4A669A)),
+                          const SizedBox(width: 4),
+                          const Text("Yazar: ", style: TextStyle(fontSize: 11, color: Color(0xFF5C7195))),
                           Flexible(
                             child: highlightText(authorsText, query),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'ISBN: ${book.isbn.isNotEmpty ? book.isbn : "Yok"}',
-                        style: const TextStyle(
-                            fontSize: 12, color: kTextSecondary),
-                      ),
-                      Text(
-                        'Yayınevi: ${book.publisher.isNotEmpty ? book.publisher : "Bilinmiyor"}',
-                        style: const TextStyle(
-                            fontSize: 12, color: kTextSecondary),
-                      ),
+                      const SizedBox(height: 3),
+                      Row(children: [const Icon(Icons.view_week, size: 13, color: Color(0xFF4A669A)),
+                        const SizedBox(width: 4), Expanded(child: Text(
+                          'ISBN: ${book.isbn.isNotEmpty ? book.isbn : "Yok"}',
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF5C7195))))]),
+                      const SizedBox(height: 3),
+                      Row(children: [const Icon(Icons.apartment, size: 13, color: Color(0xFF4A669A)),
+                        const SizedBox(width: 4), Expanded(child: Text(
+                          'Yayınevi: ${book.publisher.isNotEmpty ? book.publisher : "Bilinmiyor"}',
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF5C7195))))]),
                       if (book.shelves.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Row(
@@ -585,14 +581,16 @@ class _BookListPageState extends State<BookListPage> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 6),
+                Container(width: 1, height: 45, color: const Color(0xFFB5D1EC)),
+                const SizedBox(width: 6),
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       'Stok: $quantity',
                       style: const TextStyle(
-                          fontSize: 12, color: kTextSecondary),
+                          fontSize: 10, color: Color(0xFF5C7195)),
                     ),
                     const SizedBox(height: 2),
                     Container(
@@ -601,8 +599,8 @@ class _BookListPageState extends State<BookListPage> {
                       decoration: BoxDecoration(
                         color: isOutOfStock
                             ? kDestructive.withValues(alpha: 0.08)
-                            : kSuccess.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(12),
+                            : const Color(0xFFC9F8D5),
+                        borderRadius: BorderRadius.circular(9),
                       ),
                       child: Text(
                         '$availableQuantity',
@@ -615,6 +613,8 @@ class _BookListPageState extends State<BookListPage> {
                     ),
                   ],
                 ),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right_rounded, color: Color(0xFF45608C), size: 23),
               ],
             ),
           ),
@@ -629,25 +629,38 @@ class _BookListPageState extends State<BookListPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kitap Listesi'),
+        toolbarHeight: 70,
+        backgroundColor: const Color(0xFFE5F3FF),
+        surfaceTintColor: Colors.transparent,
+        leadingWidth: 67,
+        leading: Padding(padding: const EdgeInsets.only(left: 10),
+          child: Material(color: Colors.white, shape: const CircleBorder(),
+            elevation: 3, child: IconButton(onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF071E52))))),
+        centerTitle: true,
+        title: const Text('Kitap Listesi', style: TextStyle(fontSize: 19,
+          fontWeight: FontWeight.w800, color: Color(0xFF071E52))),
         actions: [
-          IconButton(
-            tooltip: 'Barkod tara',
-            icon: const Icon(Icons.qr_code_scanner),
-            onPressed: _scanAndFind,
-          ),
-          PopupMenuButton<String>(
+          Material(color: Colors.white, borderRadius: BorderRadius.circular(12), elevation: 3,
+            child: IconButton(tooltip: 'Barkod tara', onPressed: _scanAndFind,
+              icon: const Icon(Icons.qr_code_scanner, color: Color(0xFF0A4BA2)))),
+          const SizedBox(width: 8),
+          Material(color: const Color(0xFF0D65C2), borderRadius: BorderRadius.circular(12), elevation: 3,
+            child: PopupMenuButton<String>(
             onSelected: exportBooks,
-            icon: const Icon(Icons.download_outlined),
+            icon: const Icon(Icons.download_rounded, color: Colors.white),
             itemBuilder: (context) => const [
               PopupMenuItem(value: "excel", child: Text("Excel indir")),
               PopupMenuItem(value: "pdf", child: Text("PDF indir")),
             ],
-          ),
+          )),
+          const SizedBox(width: 12),
         ],
       ),
-      backgroundColor: kBackground,
-      body: Column(
+      backgroundColor: const Color(0xFFEAF5FF),
+      body: Container(decoration: const BoxDecoration(gradient: LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Color(0xFFE5F3FF), Color(0xFFF5FAFF)])), child: Column(
         children: [
           _buildSearchBar(),
           _buildTotalQuantityCard(),
@@ -678,7 +691,7 @@ class _BookListPageState extends State<BookListPage> {
           ),
           _buildPaginationBar(),
         ],
-      ),
+      )),
     );
   }
 }

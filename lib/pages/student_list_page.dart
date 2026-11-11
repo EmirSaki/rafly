@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../main.dart';
 import 'student_reservation_history_page.dart';
+import 'class_order.dart';
 
 class StudentListPage extends StatefulWidget {
   final String schoolCode;
 
-  const StudentListPage({
-    super.key,
-    required this.schoolCode,
-  });
+  const StudentListPage({super.key, required this.schoolCode});
 
   @override
   State<StudentListPage> createState() => _StudentListPageState();
@@ -19,6 +17,12 @@ class _StudentListPageState extends State<StudentListPage> {
   bool isLoading = true;
   String errorMessage = "";
   String selectedLevel = "tümü";
+  String selectedClass = "tümü";
+  String selectedTab = "students";
+  String searchText = "";
+  String? openClass;
+  int page = 0;
+  int pageSize = 10;
 
   List<Map<String, dynamic>> students = [];
 
@@ -94,14 +98,20 @@ class _StudentListPageState extends State<StudentListPage> {
     final branchCompare = aBranch.compareTo(bBranch);
     if (branchCompare != 0) return branchCompare;
 
-    final aStudentNumber = int.tryParse('${a["student_number"] ?? ""}') ?? 999999999;
-    final bStudentNumber = int.tryParse('${b["student_number"] ?? ""}') ?? 999999999;
+    final aStudentNumber =
+        int.tryParse('${a["student_number"] ?? ""}') ?? 999999999;
+    final bStudentNumber =
+        int.tryParse('${b["student_number"] ?? ""}') ?? 999999999;
 
     final studentNumberCompare = aStudentNumber.compareTo(bStudentNumber);
     if (studentNumberCompare != 0) return studentNumberCompare;
 
-    final aName = ApiService.normalizeTurkishText(a["full_name"]?.toString() ?? "");
-    final bName = ApiService.normalizeTurkishText(b["full_name"]?.toString() ?? "");
+    final aName = ApiService.normalizeTurkishText(
+      a["full_name"]?.toString() ?? "",
+    );
+    final bName = ApiService.normalizeTurkishText(
+      b["full_name"]?.toString() ?? "",
+    );
 
     return aName.compareTo(bName);
   }
@@ -119,7 +129,12 @@ class _StudentListPageState extends State<StudentListPage> {
       for (final r in reservations) {
         // Mezun/eski öğrencinin ödüncü, aynı numaralı aktif öğrenciye yazılmasın.
         if (r["student_archived_at"] != null) continue;
-        final num = r["student_number"]?.toString().trim().replaceAll(RegExp(r'\s+'), '') ?? "";
+        final num =
+            r["student_number"]?.toString().trim().replaceAll(
+              RegExp(r'\s+'),
+              '',
+            ) ??
+            "";
         final level = r["school_level"]?.toString().trim().toLowerCase() ?? "";
         if (num.isNotEmpty) {
           map["${num}_$level"] = level;
@@ -159,7 +174,9 @@ class _StudentListPageState extends State<StudentListPage> {
       setState(() => students = result);
     } catch (e) {
       if (!mounted) return;
-      setState(() => errorMessage = e.toString().replaceFirst("Exception: ", ""));
+      setState(
+        () => errorMessage = e.toString().replaceFirst("Exception: ", ""),
+      );
     } finally {
       if (!mounted) return;
       setState(() => isLoading = false);
@@ -206,18 +223,34 @@ class _StudentListPageState extends State<StudentListPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(isDiger ? "Öğrenci Numarası (Otomatik)" : "Öğrenci Numarası",
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary)),
+                    Text(
+                      isDiger
+                          ? "Öğrenci Numarası (Otomatik)"
+                          : "Öğrenci Numarası",
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: kTextPrimary,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     TextField(
                       controller: studentNumberController,
                       keyboardType: TextInputType.number,
                       enabled: !isDiger,
-                      decoration: InputDecoration(hintText: isDiger ? "" : "1001"),
+                      decoration: InputDecoration(
+                        hintText: isDiger ? "" : "1001",
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    const Text("Ad Soyad",
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary)),
+                    const Text(
+                      "Ad Soyad",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: kTextPrimary,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     TextField(
                       controller: fullNameController,
@@ -225,8 +258,14 @@ class _StudentListPageState extends State<StudentListPage> {
                       decoration: const InputDecoration(hintText: "Ali Yılmaz"),
                     ),
                     const SizedBox(height: 12),
-                    const Text("Sınıf",
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary)),
+                    const Text(
+                      "Sınıf",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: kTextPrimary,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     TextField(
                       controller: classNameController,
@@ -234,19 +273,26 @@ class _StudentListPageState extends State<StudentListPage> {
                       decoration: const InputDecoration(hintText: "5A"),
                     ),
                     const SizedBox(height: 12),
-                    const Text("Okul Seviyesi",
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary)),
+                    const Text(
+                      "Okul Seviyesi",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: kTextPrimary,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     DropdownButtonFormField<String>(
                       initialValue: addStudentLevel,
                       items: schoolLevels
                           .where((level) => level["value"] != "tümü")
                           .map((level) {
-                        return DropdownMenuItem<String>(
-                          value: level["value"],
-                          child: Text(level["label"]!),
-                        );
-                      }).toList(),
+                            return DropdownMenuItem<String>(
+                              value: level["value"],
+                              child: Text(level["label"]!),
+                            );
+                          })
+                          .toList(),
                       onChanged: isAddingStudent
                           ? null
                           : (value) {
@@ -254,7 +300,8 @@ class _StudentListPageState extends State<StudentListPage> {
                               setDialogState(() {
                                 addStudentLevel = value;
                                 if (value == "diğer") {
-                                  studentNumberController.text = _nextDigerNumber();
+                                  studentNumberController.text =
+                                      _nextDigerNumber();
                                 } else {
                                   studentNumberController.clear();
                                 }
@@ -266,7 +313,9 @@ class _StudentListPageState extends State<StudentListPage> {
               ),
               actions: [
                 TextButton(
-                  onPressed: isAddingStudent ? null : () => Navigator.of(dialogContext).pop(),
+                  onPressed: isAddingStudent
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
                   child: const Text("Vazgeç"),
                 ),
                 ElevatedButton(
@@ -275,7 +324,10 @@ class _StudentListPageState extends State<StudentListPage> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Text("Kaydet"),
                 ),
@@ -329,7 +381,9 @@ class _StudentListPageState extends State<StudentListPage> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response["message"]?.toString() ?? "Öğrenci eklendi")),
+        SnackBar(
+          content: Text(response["message"]?.toString() ?? "Öğrenci eklendi"),
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -352,13 +406,16 @@ class _StudentListPageState extends State<StudentListPage> {
     try {
       final now = DateTime.now();
       final endDate = now.add(const Duration(days: 30));
-      final startStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-      final endStr = "${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}";
+      final startStr =
+          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+      final endStr =
+          "${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}";
 
       await ApiService.createAnnouncement(
         schoolCode: widget.schoolCode,
         title: "Kitap İade Uyarısı",
-        content: "Sayın $fullName, aldığınız kitabın iade tarihi geçmiştir. Lütfen kitabınızı kütüphaneye iade edin.",
+        content:
+            "Sayın $fullName, aldığınız kitabın iade tarihi geçmiştir. Lütfen kitabınızı kütüphaneye iade edin.",
         targetType: "section",
         // Numara + seviye: aynı numaralı başka seviyedeki öğrenci bu uyarıyı görmez.
         targetValues: [
@@ -381,7 +438,9 @@ class _StudentListPageState extends State<StudentListPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Hata: ${e.toString().replaceFirst('Exception: ', '')}"),
+          content: Text(
+            "Hata: ${e.toString().replaceFirst('Exception: ', '')}",
+          ),
           backgroundColor: kDestructive,
         ),
       );
@@ -392,7 +451,11 @@ class _StudentListPageState extends State<StudentListPage> {
 
   Widget buildStudentCard(Map<String, dynamic> student) {
     final studentNumber =
-        student["student_number"]?.toString().trim().replaceAll(RegExp(r'\s+'), '') ?? "";
+        student["student_number"]?.toString().trim().replaceAll(
+          RegExp(r'\s+'),
+          '',
+        ) ??
+        "";
     final schoolLevel =
         student["school_level"]?.toString().trim().toLowerCase() ?? "";
     final key = "${studentNumber}_$schoolLevel";
@@ -429,8 +492,8 @@ class _StudentListPageState extends State<StudentListPage> {
                 color: isOverdue
                     ? kDestructive.withValues(alpha: 0.4)
                     : isLoaned
-                        ? kWarning.withValues(alpha: 0.4)
-                        : kBorder,
+                    ? kWarning.withValues(alpha: 0.4)
+                    : kBorder,
               ),
             ),
             child: Row(
@@ -463,13 +526,20 @@ class _StudentListPageState extends State<StudentListPage> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: isOverdue ? kDestructive : isLoaned ? kWarning : kTextPrimary,
+                          color: isOverdue
+                              ? kDestructive
+                              : isLoaned
+                              ? kWarning
+                              : kTextPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         "No: ${student["student_number"] ?? "-"} · Sınıf: ${student["class_name"] ?? "-"} · ${student["school_level"] ?? "-"}",
-                        style: const TextStyle(fontSize: 12, color: kTextSecondary),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: kTextSecondary,
+                        ),
                       ),
                       if (isOverdue)
                         Padding(
@@ -504,21 +574,39 @@ class _StudentListPageState extends State<StudentListPage> {
                     child: SizedBox(
                       height: 32,
                       child: ElevatedButton.icon(
-                        onPressed: _sendingWarning ? null : () => _sendOverdueWarning(student),
+                        onPressed: _sendingWarning
+                            ? null
+                            : () => _sendOverdueWarning(student),
                         icon: _sendingWarning
-                            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
                             : const Icon(Icons.notifications_active, size: 14),
-                        label: const Text("Uyar", style: TextStyle(fontSize: 11)),
+                        label: const Text(
+                          "Uyar",
+                          style: TextStyle(fontSize: 11),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: kDestructive,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                const Icon(Icons.chevron_right, color: kTextSecondary, size: 18),
+                const Icon(
+                  Icons.chevron_right,
+                  color: kTextSecondary,
+                  size: 18,
+                ),
               ],
             ),
           ),
@@ -527,14 +615,144 @@ class _StudentListPageState extends State<StudentListPage> {
     );
   }
 
+  Future<void> _openStudent(Map<String, dynamic> student) async {
+    final deleted = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StudentReservationHistoryPage(
+          schoolCode: widget.schoolCode,
+          student: student,
+        ),
+      ),
+    );
+    if (deleted == true && mounted) {
+      loadStudents();
+      loadLoanedStudents();
+    }
+  }
+
+  Widget _summary(
+    String title,
+    String subtitle,
+    int count,
+    IconData icon,
+    Color color,
+    String tab,
+  ) {
+    final selected = selectedTab == tab;
+    return Expanded(
+      child: InkWell(
+        onTap: () => setState(() {
+          selectedTab = tab;
+          page = 0;
+        }),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: .09),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? color : Colors.white,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: color.withValues(alpha: .17),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                    ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 9),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '$count',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final classes =
+        students
+            .map((s) => s['class_name']?.toString().trim().toUpperCase() ?? '')
+            .where((s) => s.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort(compareClassNames);
+    final query = ApiService.normalizeTurkishText(searchText);
+    final visible = students.where((s) {
+      final number = s['student_number']?.toString() ?? '';
+      final level = s['school_level']?.toString().toLowerCase() ?? '';
+      final key = '${number.trim().replaceAll(RegExp(r'\s+'), '')}_$level';
+      final tabMatch =
+          selectedTab == 'students' ||
+          (selectedTab == 'loaned'
+              ? loanedStudents.containsKey(key)
+              : overdueStudents.contains(key));
+      final classMatch =
+          selectedClass == 'tümü' ||
+          s['class_name']?.toString().trim().toUpperCase() == selectedClass;
+      return tabMatch &&
+          classMatch &&
+          (query.isEmpty ||
+              ApiService.normalizeTurkishText(
+                s['full_name']?.toString() ?? '',
+              ).contains(query) ||
+              number.contains(query));
+    }).toList();
+    final grouped = <String, List<Map<String, dynamic>>>{};
+    for (final student in visible) {
+      final name =
+          student['class_name']?.toString().trim().toUpperCase() ?? 'Diğer';
+      grouped.putIfAbsent(name.isEmpty ? 'Diğer' : name, () => []).add(student);
+    }
+    final keys = grouped.keys.toList()..sort(compareClassNames);
     return Scaffold(
+      backgroundColor: const Color(0xFFEAF5FF),
       appBar: AppBar(
-        title: const Text("Öğrenci Listesi"),
+        backgroundColor: const Color(0xFFEAF5FF),
+        centerTitle: false,
+        title: const Text(
+          "Öğrenci Listesi",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF07164A),
+          ),
+        ),
         actions: [
           IconButton(
-            onPressed: isLoading || isAddingStudent ? null : showAddStudentDialog,
+            onPressed: isLoading || isAddingStudent
+                ? null
+                : showAddStudentDialog,
             icon: const Icon(Icons.person_add_outlined),
             tooltip: "Öğrenci Ekle",
           ),
@@ -545,62 +763,299 @@ class _StudentListPageState extends State<StudentListPage> {
           ),
         ],
       ),
-      backgroundColor: kBackground,
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Okul Seviyesi",
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: kTextPrimary)),
-                const SizedBox(height: 4),
-                DropdownButtonFormField<String>(
-                  initialValue: selectedLevel,
-                  items: schoolLevels.map((level) {
-                    return DropdownMenuItem<String>(
-                      value: level["value"],
-                      child: Text(level["label"]!),
-                    );
-                  }).toList(),
-                  onChanged: isLoading
-                      ? null
-                      : (value) {
-                          if (value == null) return;
-                          setState(() => selectedLevel = value);
-                          loadStudents();
-                        },
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : errorMessage.isNotEmpty
-                    ? Center(
-                        child: Text(errorMessage,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: kDestructive, fontWeight: FontWeight.w500)),
-                      )
-                    : students.isEmpty
-                        ? const Center(
-                            child: Text("Öğrenci bulunamadı",
-                                style: TextStyle(fontSize: 14, color: kTextSecondary)),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: loadStudents,
-                            child: ListView.builder(
-                              padding: const EdgeInsets.only(bottom: 20),
-                              itemCount: students.length,
-                              itemBuilder: (context, index) {
-                                return buildStudentCard(students[index]);
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : errorMessage.isNotEmpty
+          ? Center(child: Text(errorMessage))
+          : RefreshIndicator(
+              onRefresh: () async {
+                await loadStudents();
+                await loadLoanedStudents();
+              },
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+                children: [
+                  Row(
+                    children: [
+                      _summary(
+                        'Öğrenciler',
+                        'Tüm öğrenciler',
+                        students.length,
+                        Icons.people,
+                        const Color(0xFF1474D5),
+                        'students',
+                      ),
+                      const SizedBox(width: 6),
+                      _summary(
+                        'Ödünçte',
+                        'Kitap ödünçte olanlar',
+                        loanedStudents.length,
+                        Icons.menu_book,
+                        const Color(0xFFF4A000),
+                        'loaned',
+                      ),
+                      const SizedBox(width: 6),
+                      _summary(
+                        'Uyarılar',
+                        'İade tarihi geçenler',
+                        overdueStudents.length,
+                        Icons.notifications_active,
+                        const Color(0xFFE53935),
+                        'warnings',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Okul Seviyesi'),
+                            DropdownButtonFormField<String>(
+                              key: ValueKey('level-$selectedLevel'),
+                              initialValue: selectedLevel,
+                              isExpanded: true,
+                              items: schoolLevels
+                                  .map(
+                                    (e) => DropdownMenuItem(
+                                      value: e['value'],
+                                      child: Text(e['label']!),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) {
+                                if (v != null) {
+                                  setState(() {
+                                    selectedLevel = v;
+                                    selectedClass = 'tümü';
+                                  });
+                                  loadStudents();
+                                }
                               },
                             ),
-                          ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Sınıf'),
+                            DropdownButtonFormField<String>(
+                              key: ValueKey(
+                                'class-$selectedLevel-$selectedClass',
+                              ),
+                              initialValue: classes.contains(selectedClass)
+                                  ? selectedClass
+                                  : 'tümü',
+                              isExpanded: true,
+                              items: ['tümü', ...classes]
+                                  .map(
+                                    (e) => DropdownMenuItem(
+                                      value: e,
+                                      child: Text(e == 'tümü' ? 'Tümü' : e),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setState(() {
+                                selectedClass = v ?? 'tümü';
+                                page = 0;
+                              }),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    onChanged: (v) => setState(() {
+                      searchText = v;
+                      page = 0;
+                    }),
+                    decoration: InputDecoration(
+                      hintText: 'Öğrenci adı veya numarası ara...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(13),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  if (keys.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(30),
+                        child: Text('Öğrenci bulunamadı'),
+                      ),
+                    ),
+                  for (final className in keys)
+                    _classSection(className, grouped[className]!, keys.first),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _classSection(
+    String className,
+    List<Map<String, dynamic>> group,
+    String firstClass,
+  ) {
+    final expanded =
+        openClass == className ||
+        (openClass == null && className == firstClass);
+    final sorted = [...group]
+      ..sort(
+        (a, b) => (int.tryParse('${a['student_number']}') ?? 999999).compareTo(
+          int.tryParse('${b['student_number']}') ?? 999999,
+        ),
+      );
+    final start = page * pageSize;
+    final slice = sorted.skip(start).take(pageSize).toList();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: .75),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.people, color: Color(0xFF1672D0)),
+            title: Text(
+              '$className Sınıfı',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF07164A),
+              ),
+            ),
+            subtitle: Text('${group.length} öğrenci'),
+            trailing: Icon(
+              expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+            ),
+            onTap: () => setState(() {
+              openClass = expanded ? '' : className;
+              page = 0;
+            }),
           ),
+          if (expanded) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                children: [
+                  SizedBox(width: 46, child: Text('No')),
+                  Expanded(child: Text('Öğrenci Adı')),
+                  Text('Durum'),
+                ],
+              ),
+            ),
+            for (final student in slice) _studentRow(student),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                children: [
+                  Text(
+                    'Toplam ${group.length} öğrenci',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: page > 0 ? () => setState(() => page--) : null,
+                    icon: const Icon(Icons.chevron_left),
+                  ),
+                  Text('${page + 1} / ${(group.length / pageSize).ceil()}'),
+                  IconButton(
+                    onPressed: start + pageSize < group.length
+                        ? () => setState(() => page++)
+                        : null,
+                    icon: const Icon(Icons.chevron_right),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _studentRow(Map<String, dynamic> student) {
+    final number = student['student_number']?.toString() ?? '';
+    final level =
+        student['school_level']?.toString().trim().toLowerCase() ?? '';
+    final key = '${number.trim().replaceAll(RegExp(r'\s+'), '')}_$level';
+    final overdue = overdueStudents.contains(key);
+    final loaned = loanedStudents.containsKey(key);
+    final name = student['full_name']?.toString() ?? '-';
+    final initials = name
+        .split(' ')
+        .where((e) => e.isNotEmpty)
+        .take(2)
+        .map((e) => e[0])
+        .join();
+    return InkWell(
+      onTap: () => _openStudent(student),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Color(0xFFEDF2FA))),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 46,
+              child: Text(number, style: const TextStyle(fontSize: 12)),
+            ),
+            CircleAvatar(
+              radius: 16,
+              backgroundColor: const Color(0xFFDDEEFF),
+              child: Text(initials, style: const TextStyle(fontSize: 11)),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                  Text(
+                    '${student['school_level'] ?? ''} · ${student['class_name'] ?? ''}',
+                    style: const TextStyle(fontSize: 10, color: kTextSecondary),
+                  ),
+                ],
+              ),
+            ),
+            if (overdue)
+              TextButton(
+                onPressed: _sendingWarning
+                    ? null
+                    : () => _sendOverdueWarning(student),
+                child: const Text(
+                  'Uyarı Gönder',
+                  style: TextStyle(color: kDestructive, fontSize: 10),
+                ),
+              )
+            else if (loaned)
+              const Text(
+                'Ödünçte',
+                style: TextStyle(color: kWarning, fontSize: 10),
+              ),
+            const Icon(Icons.chevron_right, size: 17),
+          ],
+        ),
       ),
     );
   }

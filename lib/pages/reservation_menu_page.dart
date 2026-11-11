@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
 import 'loan_book_page.dart';
 import 'return_book_page.dart';
 import 'reservation_list_page.dart';
@@ -15,26 +14,28 @@ class ReservationMenuPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Rezervasyonlar")),
-      backgroundColor: kBackground,
+      backgroundColor: const Color(0xFFEFF7FF),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(children: [
+          Positioned(bottom: -126, left: -100, child: Container(width: 540, height: 230,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFB8DBFB)))),
+          Positioned(bottom: -155, left: -105, child: Container(width: 550, height: 230,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF67ADEF)))),
+          Positioned(bottom: -185, left: -120, child: Container(width: 560, height: 230,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF287BCE)))),
+          SingleChildScrollView(padding: const EdgeInsets.fromLTRB(30, 18, 30, 130), child: Column(
             children: [
-              const Text(
-                "İşlem Seçin",
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: kTextPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
+              Align(alignment: Alignment.centerLeft,
+                child: Material(color: Colors.white, shape: const CircleBorder(), elevation: 4,
+                  child: IconButton(onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF071E52)), iconSize: 25))),
+              const SizedBox(height: 8),
+              const Text('Rezervasyonlar', style: TextStyle(fontSize: 24,
+                fontWeight: FontWeight.w800, color: Color(0xFF071E52))),
+              const SizedBox(height: 29),
               _buildMenuCard(
                 context,
-                icon: Icons.book_outlined,
+                icon: Icons.book_rounded,
                 title: "Kitap Ver",
                 subtitle: "Öğrenciye kitap ödünç ver",
                 onTap: () {
@@ -46,10 +47,10 @@ class ReservationMenuPage extends StatelessWidget {
                   );
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               _buildMenuCard(
                 context,
-                icon: Icons.assignment_return_outlined,
+                icon: Icons.assignment_return_rounded,
                 title: "İade Al",
                 subtitle: "Ödünç alınan kitabı iade al",
                 onTap: () {
@@ -61,10 +62,10 @@ class ReservationMenuPage extends StatelessWidget {
                   );
                 },
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               _buildMenuCard(
                 context,
-                icon: Icons.list_alt_outlined,
+                icon: Icons.event_note_rounded,
                 title: "Rezervasyonlar",
                 subtitle: "Tüm rezervasyon geçmişi",
                 onTap: () {
@@ -78,8 +79,8 @@ class ReservationMenuPage extends StatelessWidget {
                 },
               ),
             ],
-          ),
-        ),
+          )),
+        ]),
       ),
     );
   }
@@ -92,55 +93,50 @@ class ReservationMenuPage extends StatelessWidget {
     required VoidCallback onTap,
   }) {
     return Material(
-      color: kSurface,
-      borderRadius: BorderRadius.circular(8),
+      color: const Color(0xFFF9FCFF),
+      borderRadius: BorderRadius.circular(19),
+      elevation: 5,
+      shadowColor: const Color(0x285B9BD9),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
+        borderRadius: BorderRadius.circular(19),
+        child: ClipRRect(borderRadius: BorderRadius.circular(19), child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
+          height: 160,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: kBorder),
+            borderRadius: BorderRadius.circular(19),
+            border: Border.all(color: Colors.white, width: 1.5),
+            boxShadow: const [BoxShadow(color: Color(0x285B9BD9), blurRadius: 18, offset: Offset(0, 8))],
           ),
-          child: Row(
+          child: Stack(children: [
+            Positioned(bottom: -42, left: -35, child: Container(width: 240, height: 90,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFE1F1FF)))),
+            Positioned(bottom: -55, right: -35, child: Container(width: 250, height: 98,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFC6E5FF)))),
+            Positioned(bottom: -70, left: 0, child: Container(width: 360, height: 88,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFD4EAFF)))),
+            Positioned.fill(child: Column(mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 76,
+                height: 76,
                 decoration: BoxDecoration(
-                  color: kPrimary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFFDFEFFF),
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                child: Icon(icon, color: kPrimary, size: 20),
+                child: Icon(icon, color: const Color(0xFF286FCB), size: 43),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: kTextPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style:
-                          const TextStyle(fontSize: 13, color: kTextSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right, color: kTextSecondary, size: 20),
+              const SizedBox(height: 7),
+              Text(title, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800,
+                color: Color(0xFF071E52))),
+              Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF536C96))),
             ],
-          ),
-        ),
+          )),
+          Positioned(right: 14, top: 65, child: Container(width: 39, height: 39,
+            decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+            child: const Icon(Icons.chevron_right_rounded, color: Color(0xFF071E52), size: 29))),
+          ]),
+        )),
       ),
     );
   }

@@ -12,7 +12,9 @@ import 'student_books_screen.dart';
 import 'student_reservations_screen.dart';
 
 class StudentHomeScreen extends StatefulWidget {
-  const StudentHomeScreen({super.key});
+  final VoidCallback? onOpenHistory;
+  final VoidCallback? onOpenBooks;
+  const StudentHomeScreen({super.key, this.onOpenHistory, this.onOpenBooks});
   @override
   State<StudentHomeScreen> createState() => _StudentHomeScreenState();
 }
@@ -56,9 +58,13 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     if (mounted) setState(() => _loading = false);
   }
 
-  Future<void> _checkAndNotifyNewAnnouncements(List<Map<String, dynamic>> all) async {
+  Future<void> _checkAndNotifyNewAnnouncements(
+    List<Map<String, dynamic>> all,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final notificationsEnabled =
+          prefs.getBool('student_announcements_enabled') ?? true;
       final lastSeenId = prefs.getInt('last_seen_announcement_id') ?? 0;
 
       // En büyük ID'yi bul
@@ -74,7 +80,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       }
 
       // Yeni duyurular için bildirim göster
-      for (final a in newOnes) {
+      for (final a
+          in notificationsEnabled ? newOnes : <Map<String, dynamic>>[]) {
         final id = a['id'] as int? ?? 0;
         final title = a['title']?.toString() ?? 'Yeni Duyuru';
         final content = a['content']?.toString() ?? '';
@@ -119,15 +126,25 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     List<String> targetValues = [];
     final raw = a['target_values'];
     if (raw is List) {
-      targetValues = raw.map((v) => v.toString().trim()).where((v) => v.isNotEmpty).toList();
+      targetValues = raw
+          .map((v) => v.toString().trim())
+          .where((v) => v.isNotEmpty)
+          .toList();
     } else if (raw is String && raw.trim().isNotEmpty) {
       try {
         final parsed = jsonDecode(raw);
         if (parsed is List) {
-          targetValues = parsed.map((v) => v.toString().trim()).where((v) => v.isNotEmpty).toList();
+          targetValues = parsed
+              .map((v) => v.toString().trim())
+              .where((v) => v.isNotEmpty)
+              .toList();
         }
       } catch (_) {
-        targetValues = raw.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList();
+        targetValues = raw
+            .split(',')
+            .map((v) => v.trim())
+            .where((v) => v.isNotEmpty)
+            .toList();
       }
     }
 
@@ -135,9 +152,15 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
     final userLevel = (auth.schoolLevel ?? '').toLowerCase().trim();
     // API login yanıtında sınıf bilgisi "user_class" olarak dönüyor
-    final userClass = (auth.user?['user_class'] ?? auth.user?['class_name'] ?? '').toString().trim().toUpperCase();
+    final userClass =
+        (auth.user?['user_class'] ?? auth.user?['class_name'] ?? '')
+            .toString()
+            .trim()
+            .toUpperCase();
     // Kişisel bildirimler (iade uyarısı vb.) student_number ile eşleşir
-    final userStudentNumber = (auth.user?['student_number'] ?? '').toString().trim();
+    final userStudentNumber = (auth.user?['student_number'] ?? '')
+        .toString()
+        .trim();
 
     if (targetType == 'school_level') {
       final targets = targetValues.map((v) => v.toLowerCase().trim()).toList();
@@ -160,7 +183,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     return false;
   }
 
-  int get _totalReturned => _reservations.where((r) => r['status'] == 'returned').length;
+  int get _totalReturned =>
+      _reservations.where((r) => r['status'] == 'returned').length;
 
   Map<String, dynamic>? get _activeReservation {
     final active = _reservations.where((r) => r['status'] == 'loaned').toList();
@@ -184,7 +208,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     final name = auth.user?['user_name'] ?? 'Öğrenci';
 
     return Scaffold(
-      backgroundColor: kBackground,
+      backgroundColor: const Color(0xFFEAF5FF),
       body: RefreshIndicator(
         color: kPrimary,
         backgroundColor: kSurface,
@@ -196,10 +220,12 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             if (_loading)
               const Padding(
                 padding: EdgeInsets.all(40),
-                child: Center(child: CircularProgressIndicator(color: kPrimary)),
+                child: Center(
+                  child: CircularProgressIndicator(color: kPrimary),
+                ),
               )
             else ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: 8),
               _statsRow(),
               const SizedBox(height: 20),
               if (_activeReservation != null) _activeBookCard(),
@@ -209,7 +235,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 const SizedBox(height: 24),
                 _announcementsSection(),
               ],
-              const SizedBox(height: 100),
+              const SizedBox(height: 28),
             ],
           ],
         ),
@@ -221,33 +247,25 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 20,
-        bottom: 24,
-        left: 24,
-        right: 24,
+        top: MediaQuery.of(context).padding.top + 24,
+        bottom: 20,
+        left: 20,
+        right: 20,
       ),
-      decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFEAF5FF)),
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
-              color: kPrimary,
-              borderRadius: BorderRadius.circular(14),
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2C63C9), Color(0xFF082D81)],
+              ),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: const Center(
-              child: Icon(Icons.school_rounded, size: 26, color: Colors.white),
+              child: Icon(Icons.school_rounded, size: 31, color: Colors.white),
             ),
           ),
           const SizedBox(width: 14),
@@ -257,14 +275,34 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
               children: [
                 Text(
                   'Merhaba, $name',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: kTextPrimary),
+                  style: const TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF07164A),
+                  ),
                 ),
                 const SizedBox(height: 2),
                 const Text(
                   'Kütüphane Panelin',
-                  style: TextStyle(fontSize: 12, color: kTextSecondary),
+                  style: TextStyle(fontSize: 14, color: kTextSecondary),
                 ),
               ],
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              final item = _announcements.isNotEmpty
+                  ? _announcements.first
+                  : null;
+              if (item != null) _showAllAnnouncements();
+            },
+            icon: Badge(
+              isLabelVisible: _announcements.isNotEmpty,
+              child: const Icon(
+                Icons.notifications_rounded,
+                color: Color(0xFF2156A5),
+                size: 27,
+              ),
             ),
           ),
         ],
@@ -272,15 +310,83 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     );
   }
 
+  void _showAnnouncement(Map<String, dynamic> item) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(item['title']?.toString() ?? 'Bilgilendirme'),
+        content: Text(item['content']?.toString() ?? ''),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Kapat'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAllAnnouncements() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * .68,
+          child: Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(18),
+                child: Text(
+                  'Bilgilendirmeler',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _announcements.length,
+                  itemBuilder: (context, index) {
+                    final item = _announcements[index];
+                    return ListTile(
+                      title: Text(item['title']?.toString() ?? ''),
+                      subtitle: Text(
+                        item['content']?.toString() ?? '',
+                        maxLines: 2,
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.pop(sheetContext);
+                        _showAnnouncement(item);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _statsRow() {
     final active = _activeReservation;
-    final days = active != null ? _daysRemaining(active['due_date']?.toString()) : 0;
+    final days = active != null
+        ? _daysRemaining(active['due_date']?.toString())
+        : 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          Expanded(child: _statCard('Okunan Kitap', '$_totalReturned', Icons.check_circle_outline_rounded, kSuccess)),
+          Expanded(
+            child: _statCard(
+              'Okunan Kitap',
+              '$_totalReturned',
+              Icons.menu_book_rounded,
+              const Color(0xFF0A9C66),
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: _statCard(
@@ -297,11 +403,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
   Widget _statCard(String label, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        color: kSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kBorder, width: 0.5),
+        color: color.withValues(alpha: .055),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white, width: 1.4),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.03),
@@ -313,11 +419,25 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 10),
-          Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: color)),
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: color.withValues(alpha: .11),
+            child: Icon(icon, color: color, size: 26),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w800,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 12, color: kTextSecondary)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: kTextSecondary),
+          ),
         ],
       ),
     );
@@ -329,15 +449,16 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     final writer = r['book_writer'] ?? '';
     final days = _daysRemaining(r['due_date']?.toString());
     final dueDate = r['due_date']?.toString().split('T').first ?? '-';
+    final coverUrl = r['cover_url']?.toString() ?? '';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: kSurface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: kBorder, width: 0.5),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white, width: 1.4),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
@@ -351,21 +472,33 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.auto_stories_rounded, color: kPrimary, size: 20),
+                const Icon(
+                  Icons.auto_stories_rounded,
+                  color: kPrimary,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 const Text(
                   'AKTİF KİTABIN',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: kTextPrimary, letterSpacing: 0.5),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: kTextPrimary,
+                    letterSpacing: 0.5,
+                  ),
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: days < 0
                         ? kDestructive.withValues(alpha: 0.1)
                         : days <= 3
-                            ? kWarning.withValues(alpha: 0.1)
-                            : kSuccess.withValues(alpha: 0.1),
+                        ? kWarning.withValues(alpha: 0.1)
+                        : kSuccess.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -373,25 +506,115 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: days < 0 ? kDestructive : (days <= 3 ? kWarning : kSuccess),
+                      color: days < 0
+                          ? kDestructive
+                          : (days <= 3 ? kWarning : kSuccess),
                     ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 14),
-            Text(bookName, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: kTextPrimary)),
-            if (writer.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(writer, style: const TextStyle(fontSize: 13, color: kTextSecondary)),
-            ],
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const Icon(Icons.calendar_today_rounded, size: 14, color: kTextSecondary),
-                const SizedBox(width: 6),
-                Text('Teslim: $dueDate', style: const TextStyle(fontSize: 12, color: kTextSecondary)),
-              ],
+            InkWell(
+              onTap:
+                  widget.onOpenHistory ??
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const StudentReservationsScreen(),
+                    ),
+                  ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          bookName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF07164A),
+                          ),
+                        ),
+                        if (writer.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.person,
+                                size: 16,
+                                color: Color(0xFF5272A7),
+                              ),
+                              const SizedBox(width: 7),
+                              Expanded(
+                                child: Text(
+                                  writer,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: kTextSecondary),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today_rounded,
+                              size: 15,
+                              color: Color(0xFF5272A7),
+                            ),
+                            const SizedBox(width: 7),
+                            Expanded(
+                              child: Text(
+                                'Teslim: $dueDate',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: kTextSecondary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      width: 72,
+                      height: 103,
+                      child: coverUrl.isEmpty
+                          ? Container(
+                              color: const Color(0xFFDDEEFF),
+                              child: const Icon(
+                                Icons.menu_book,
+                                color: kPrimary,
+                              ),
+                            )
+                          : Image.network(
+                              coverUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Container(
+                                color: const Color(0xFFDDEEFF),
+                                child: const Icon(
+                                  Icons.menu_book,
+                                  color: kPrimary,
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  const Icon(Icons.chevron_right, color: kPrimary),
+                ],
+              ),
             ),
           ],
         ),
@@ -407,25 +630,72 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Hızlı Erişim',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: kTextPrimary),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Hızlı Erişim',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF07164A),
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed:
+                    widget.onOpenBooks ??
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => StudentBooksScreen(
+                          schoolCode: auth.schoolCode ?? '',
+                        ),
+                      ),
+                    ),
+                child: const Text('Tümünü Gör  ›'),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          _actionTile(
-            'Kitap Listesi',
-            'Okulundaki mevcut kitapları gör',
-            Icons.library_books_rounded,
-            kPrimary,
-            () => Navigator.push(context, MaterialPageRoute(builder: (_) => StudentBooksScreen(schoolCode: auth.schoolCode ?? ''))),
-          ),
-          const SizedBox(height: 10),
-          _actionTile(
-            'Rezervasyon Geçmişi',
-            'Tüm ödünç ve iade kayıtların',
-            Icons.history_rounded,
-            kTextSecondary,
-            () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentReservationsScreen())),
+          Row(
+            children: [
+              Expanded(
+                child: _actionTile(
+                  'Kitap Listesi',
+                  'Okulundaki mevcut kitapları gör',
+                  Icons.library_books_rounded,
+                  kPrimary,
+                  widget.onOpenBooks ??
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => StudentBooksScreen(
+                            schoolCode: auth.schoolCode ?? '',
+                          ),
+                        ),
+                      ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _actionTile(
+                  'Rezervasyon Geçmişi',
+                  'Tüm ödünç ve iade kayıtların',
+                  Icons.history_rounded,
+                  kTextSecondary,
+                  widget.onOpenHistory ??
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const StudentReservationsScreen(),
+                        ),
+                      ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -446,12 +716,24 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   color: kWarning.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.campaign_rounded, color: kWarning, size: 18),
+                child: const Icon(
+                  Icons.campaign_rounded,
+                  color: kWarning,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 10),
-              const Text(
-                'Bilgilendirmeler',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: kTextPrimary),
+              const Flexible(
+                child: Text(
+                  'Bilgilendirmeler',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF07164A),
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               Container(
@@ -462,8 +744,21 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 ),
                 child: Text(
                   '${_announcements.length}',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: kWarning),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: kWarning,
+                  ),
                 ),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () {
+                  if (_announcements.isNotEmpty) {
+                    _showAllAnnouncements();
+                  }
+                },
+                child: const Text('Tümünü Gör  ›'),
               ),
             ],
           ),
@@ -542,7 +837,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                 ),
                 child: Text(
                   isWarning ? 'Uyarı' : 'Yeni',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: accentColor),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: accentColor,
+                  ),
                 ),
               ),
             ],
@@ -552,7 +851,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             FutureBuilder<List<String>>(
               future: _fetchAnnouncementImages(announcementId),
               builder: (context, snap) {
-                if (!snap.hasData || snap.data!.isEmpty) return const SizedBox.shrink();
+                if (!snap.hasData || snap.data!.isEmpty) {
+                  return const SizedBox.shrink();
+                }
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: _buildAnnouncementImageGallery(snap.data!, title),
@@ -563,7 +864,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
             content,
             style: TextStyle(
               fontSize: 13,
-              color: isWarning ? kDestructive.withValues(alpha: 0.8) : kTextSecondary,
+              color: isWarning
+                  ? kDestructive.withValues(alpha: 0.8)
+                  : kTextSecondary,
               height: 1.4,
             ),
             maxLines: 5,
@@ -572,16 +875,28 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.person_outline_rounded, size: 13, color: kTextSecondary),
+              const Icon(
+                Icons.person_outline_rounded,
+                size: 13,
+                color: kTextSecondary,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   senderName,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: kTextSecondary),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: kTextSecondary,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Icon(Icons.calendar_today_rounded, size: 12, color: kTextSecondary),
+              const Icon(
+                Icons.calendar_today_rounded,
+                size: 12,
+                color: kTextSecondary,
+              ),
               const SizedBox(width: 4),
               Text(
                 endDate,
@@ -601,10 +916,8 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => FullScreenImagePage(
-                imageList: images,
-                title: title,
-              ),
+              builder: (_) =>
+                  FullScreenImagePage(imageList: images, title: title),
             ),
           );
         },
@@ -649,14 +962,21 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                   bottom: 4,
                   right: 4,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black54,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       '${i + 1}/${images.length}',
-                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -697,42 +1017,60 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
     );
   }
 
-  Widget _actionTile(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+  Widget _actionTile(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Material(
-      color: kSurface,
-      borderRadius: BorderRadius.circular(8),
+      color: const Color(0xFFF7FBFF),
+      borderRadius: BorderRadius.circular(17),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(17),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(13),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: kBorder),
+            borderRadius: BorderRadius.circular(17),
+            border: Border.all(color: Colors.white, width: 1.3),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Center(child: Icon(icon, color: color, size: 20)),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: kTextPrimary)),
-                    const SizedBox(height: 2),
-                    Text(subtitle, style: const TextStyle(fontSize: 13, color: kTextSecondary)),
-                  ],
-                ),
+              const SizedBox(height: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF07164A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: kTextSecondary),
+                  ),
+                ],
               ),
-              const Icon(Icons.chevron_right, color: kTextSecondary, size: 20),
             ],
           ),
         ),
