@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../main.dart';
 import '../services/api_service.dart';
+import '../services/staff_session.dart';
 import 'add_book_page.dart';
 import 'book_list_page.dart';
 import 'create_announcement_page.dart';
@@ -85,6 +86,7 @@ class _HomePageState extends State<HomePage> {
       await prefs.remove('admin_user_name');
       await prefs.remove('admin_user_surname');
       await prefs.remove('admin_user_role');
+      await StaffSession.clear();
 
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(

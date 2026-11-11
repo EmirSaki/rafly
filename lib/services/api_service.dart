@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/book.dart';
 import 'dart:typed_data';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'staff_session.dart';
 
 class ApiService {
   // Varsayılan canlı API. Yerel backend için:
@@ -14,6 +15,10 @@ class ApiService {
   );
 
   static const MethodChannel _channel = MethodChannel('library_export_channel');
+
+  // Tüm API istekleri bu istemciden geçer; personel oturumu varsa token'ı
+  // Authorization başlığına ekler (öğrenci istekleri kendi başlığını taşır).
+  static final http.Client _client = StaffAuthClient(baseUrl);
 
   static String normalizeIsbn(String value) {
     return value.replaceAll(RegExp(r'[^0-9Xx]'), '').toUpperCase().trim();
@@ -134,7 +139,7 @@ class ApiService {
     final normalizedIsbn = normalizeIsbn(isbn);
     final url = Uri.parse("$baseUrl/api/books/isbn/$normalizedIsbn");
 
-    final response = await http.get(url);
+    final response = await _client.get(url);
     final decoded = _validateSuccessResponse(response);
     final data = Map<String, dynamic>.from(decoded["data"] ?? {});
 
@@ -166,7 +171,7 @@ class ApiService {
 
     final url = Uri.parse("$baseUrl/api/students?$query");
 
-    final response = await http.get(url);
+    final response = await _client.get(url);
     final decoded = _validateSuccessResponse(response);
 
     final List data = decoded["data"] ?? [];
@@ -191,7 +196,7 @@ class ApiService {
       ),
     );
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await _client.send(request);
     final response = await http.Response.fromStream(streamedResponse);
 
     return _validateSuccessResponse(response);
@@ -208,7 +213,7 @@ class ApiService {
 
     final normalizedClassName = className.trim().toUpperCase();
 
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: {
         "Content-Type": "application/json",
@@ -242,7 +247,7 @@ class ApiService {
       "$baseUrl/api/schools/$schoolCode/books/isbn/$normalizedIsbn",
     );
 
-    final response = await http.get(url);
+    final response = await _client.get(url);
 
     if (response.statusCode == 404) {
       throw Exception("Bu kitap okul envanterinde bulunamadı");
@@ -285,7 +290,7 @@ class ApiService {
     final schoolCode = (bookData["schoolCode"] ?? "").toString();
     final url = Uri.parse("$baseUrl/api/schools/$schoolCode/books");
 
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: {
         "Content-Type": "application/json",
@@ -329,7 +334,7 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/users/login");
 
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: {
         "Content-Type": "application/json",
@@ -342,6 +347,8 @@ class ApiService {
     );
 
     final decoded = _validateSuccessResponse(response);
+    // Personel oturum token'ını sakla; sonraki isteklere otomatik eklenir.
+    await StaffSession.save(decoded["token"]?.toString());
     return Map<String, dynamic>.from(decoded["data"] ?? {});
   }
 
@@ -357,7 +364,7 @@ class ApiService {
       "$baseUrl/api/schools/$schoolCode/books?page=$page&limit=$limit&search=${Uri.encodeComponent(normalizedSearch)}",
     );
 
-    final response = await http.get(url);
+    final response = await _client.get(url);
     final decoded = _validateSuccessResponse(response);
 
     final List data = decoded["data"] ?? [];
@@ -374,7 +381,7 @@ class ApiService {
   static Future<Book> getSchoolBookDetail(String schoolCode, int bookId) async {
     final url = Uri.parse("$baseUrl/api/schools/$schoolCode/books/$bookId");
 
-    final response = await http.get(url);
+    final response = await _client.get(url);
     final decoded = _validateSuccessResponse(response);
 
     return Book.fromJson(
@@ -409,7 +416,7 @@ class ApiService {
     if (shelves != null) body["shelves"] = shelves;
     if (isValilikBook != null) body["is_valilik_book"] = isValilikBook;
 
-    final response = await http.patch(
+    final response = await _client.patch(
       url,
       headers: {
         "Content-Type": "application/json",
@@ -432,7 +439,7 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/schools/$schoolCode/books/$bookId");
 
-    final response = await http.delete(
+    final response = await _client.delete(
       url,
       headers: {
         "Content-Type": "application/json",
@@ -468,7 +475,7 @@ class ApiService {
         "due_date": dueDate.trim(),
     };
 
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: {
         "Content-Type": "application/json",
@@ -533,7 +540,7 @@ class ApiService {
 
     final url = Uri.parse("$baseUrl/api/reservations?${params.join('&')}");
 
-    final response = await http.get(url);
+    final response = await _client.get(url);
     final decoded = _validateSuccessResponse(response);
 
     final List data = decoded["data"] ?? [];
@@ -547,7 +554,7 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/reservations/$reservationId/return");
 
-    final response = await http.patch(
+    final response = await _client.patch(
       url,
       headers: {
         "Content-Type": "application/json",
@@ -571,7 +578,7 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/schools/$schoolCode/logo");
 
-    final response = await http.get(url);
+    final response = await _client.get(url);
 
     if (response.statusCode != 200) return null;
 
@@ -602,7 +609,7 @@ class ApiService {
       http.MultipartFile.fromBytes("cover", imageBytes, filename: fileName),
     );
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await _client.send(request);
     final response = await http.Response.fromStream(streamedResponse);
 
     return _validateSuccessResponse(response);
@@ -615,7 +622,7 @@ class ApiService {
     final normalized = normalizeIsbn(isbn);
     final url = Uri.parse("$baseUrl/api/books/isbn/$normalized/cover");
 
-    final response = await http.delete(url);
+    final response = await _client.delete(url);
     final decoded = _decodeJsonResponse(response);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
@@ -642,7 +649,7 @@ class ApiService {
       ),
     );
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await _client.send(request);
     final response = await http.Response.fromStream(streamedResponse);
 
     return _validateSuccessResponse(response);
@@ -653,7 +660,7 @@ class ApiService {
   }) async {
     final url = Uri.parse("$baseUrl/api/schools/$schoolCode/logo");
 
-    final response = await http.delete(url);
+    final response = await _client.delete(url);
 
     final decoded = _decodeJsonResponse(response);
 
@@ -673,7 +680,7 @@ class ApiService {
       "$baseUrl/api/students?schoolCode=$schoolCode&student_number=${Uri.encodeComponent(studentNumber)}&school_level=${Uri.encodeComponent(schoolLevel)}",
     );
 
-    final response = await http.delete(
+    final response = await _client.delete(
       url,
       headers: {"Content-Type": "application/json"},
     );
@@ -710,7 +717,7 @@ class ApiService {
     String? schoolLevel,
   }) async {
     final url = Uri.parse('$baseUrl/api/students/login');
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: await _studentHeaders(),
       body: jsonEncode({
@@ -734,7 +741,7 @@ class ApiService {
     required String schoolLevel,
   }) async {
     final url = Uri.parse('$baseUrl/api/students/register');
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: await _studentHeaders(),
       body: jsonEncode({
@@ -753,7 +760,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getStudentProfile() async {
     final url = Uri.parse('$baseUrl/api/students/profile');
-    final response = await http.get(
+    final response = await _client.get(
       url,
       headers: await _studentHeaders(auth: true),
     );
@@ -771,7 +778,7 @@ class ApiService {
     if (password != null) body['password'] = password;
 
     final url = Uri.parse('$baseUrl/api/students/profile');
-    final response = await http.patch(
+    final response = await _client.patch(
       url,
       headers: await _studentHeaders(auth: true),
       body: jsonEncode(body),
@@ -781,7 +788,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>> deleteStudentAccount() async {
     final url = Uri.parse('$baseUrl/api/students/profile');
-    final response = await http.delete(
+    final response = await _client.delete(
       url,
       headers: await _studentHeaders(auth: true),
     );
@@ -790,7 +797,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getStudentReservations() async {
     final url = Uri.parse('$baseUrl/api/students/reservations');
-    final response = await http.get(
+    final response = await _client.get(
       url,
       headers: await _studentHeaders(auth: true),
     );
@@ -801,7 +808,7 @@ class ApiService {
     required int bookId,
   }) async {
     final url = Uri.parse('$baseUrl/api/students/reservations');
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: await _studentHeaders(auth: true),
       body: jsonEncode({'book_id': bookId}),
@@ -823,7 +830,7 @@ class ApiService {
       "$baseUrl/api/schools/$schoolCode/books/export?format=$normalizedFormat",
     );
 
-    final response = await http.get(url);
+    final response = await _client.get(url);
 
     if (response.statusCode != 200) {
       Map<String, dynamic>? decoded;
@@ -860,7 +867,7 @@ class ApiService {
     required String schoolCode,
   }) async {
     final url = Uri.parse('$baseUrl/api/announcements?schoolCode=$schoolCode');
-    final response = await http.get(
+    final response = await _client.get(
       url,
       headers: await _studentHeaders(auth: true),
     );
@@ -875,7 +882,7 @@ class ApiService {
     required int id,
   }) async {
     final url = Uri.parse('$baseUrl/api/announcements/$id/images');
-    final response = await http.get(
+    final response = await _client.get(
       url,
       headers: await _studentHeaders(auth: true),
     );
@@ -915,7 +922,7 @@ class ApiService {
       }
     }
 
-    final response = await http.post(
+    final response = await _client.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(body),
