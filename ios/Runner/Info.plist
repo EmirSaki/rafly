@@ -50,9 +50,9 @@
 		</dict>
 	</dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Kitap barkodlarını taramak için kamera erişimi gereklidir.</string>
+	<string>Kitap barkodlarını taramak ve isteğe bağlı olarak kitap kapağı veya duyuru görseli fotoğrafı çekmek için kamera erişimi gereklidir.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Okul logosu yüklemek için fotoğraf kitaplığı erişimi gereklidir.</string>
+	<string>Kitap kapağı, okul logosu veya duyuru görseli eklemek için seçtiğiniz fotoğrafa erişim gereklidir. Yalnızca seçtiğiniz görsel yüklenir.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
