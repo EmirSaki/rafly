@@ -730,6 +730,19 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  static Future<Map<String, dynamic>> setStudentPassword({
+    required String setupToken,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse('$baseUrl/api/students/set-password');
+    final response = await _client.post(
+      url,
+      headers: await _studentHeaders(),
+      body: jsonEncode({'setup_token': setupToken, 'new_password': newPassword}),
+    );
+    return jsonDecode(response.body);
+  }
+
   static Future<Map<String, dynamic>> studentRegister({
     required String schoolCode,
     required String userName,

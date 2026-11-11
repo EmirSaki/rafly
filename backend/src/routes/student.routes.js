@@ -23,6 +23,7 @@ const {
   bulkAssignPasswords,
   deleteStudent,
   deleteMyAccount,
+  setStudentPassword,
 } = require("../controllers/student.controller");
 
 const { authStudent } = require("../middlewares/student.middleware");
@@ -41,6 +42,7 @@ router.post("/import", upload.single("file"), importStudentsFromExcel);
 // Auth olmayan
 router.post("/register", registerStudent);
 router.post("/login", loginStudent);
+router.post("/set-password", setStudentPassword);
 // Mail ile şifre alma kaldırıldı (öğrenci şifreleri sabit "1234")
 router.post("/bulk-passwords", bulkAssignPasswords);
 

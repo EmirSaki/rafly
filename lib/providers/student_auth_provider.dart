@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 
+/// İlk giriş: öğrenci kendi şifresini belirlemeden oturum açılmaz.
+class PasswordSetupRequired implements Exception {
+  final String setupToken;
+  PasswordSetupRequired(this.setupToken);
+}
+
 class StudentAuthProvider extends ChangeNotifier {
   bool _loading = true;
   bool _loggedIn = false;
@@ -61,7 +67,10 @@ class StudentAuthProvider extends ChangeNotifier {
       schoolLevel: schoolLevel,
     );
 
-    if (res['success'] != true) {
+    if (res['code'] == 'PASSWORD_SETUP_REQUIRED' && res['setup_token'] is String) {
+      throw PasswordSetupRequired(res['setup_token'] as String);
+    }
+    if (res['success'] != true || res['token'] == null) {
       throw Exception(res['message'] ?? 'Giriş yapılamadı');
     }
 

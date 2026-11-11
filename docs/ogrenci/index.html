@@ -444,7 +444,7 @@ function renderLogin(){
         </div>
       </div>
       <button class="btn" id="btn-login"><span>Giriş Yap</span></button>
-      <p style="text-align:center;margin-top:12px;font-size:13px;color:var(--text-secondary)">Giriş şifreniz: <b>1234</b></p>
+      <p style="text-align:center;margin-top:12px;font-size:13px;color:var(--text-secondary)">İlk girişte şifre: <b>1234</b>. Ardından kendi şifreni belirlersin.</p>
       <a href="../" style="display:block;text-align:center;margin-top:12px;font-size:13px;color:var(--text-secondary);text-decoration:none">← Ana sayfaya dön</a>
     </div>
   </div>`;
@@ -473,7 +473,11 @@ async function doLogin(){
     const r=await api("/api/students/login",{method:"POST",body:{
       schoolCode, student_number:number, password, school_level:state.loginLevel
     }});
-    if(r.data && r.data.success===true){
+    if(r.data && r.data.code==="PASSWORD_SETUP_REQUIRED" && r.data.setup_token){
+      renderSetPassword(r.data.setup_token,{schoolCode,number,level:state.loginLevel});
+      return;
+    }
+    if(r.data && r.data.success===true && r.data.token){
       state.token=r.data.token;
       state.user=r.data.data||{};
       state.schoolCode=schoolCode;
@@ -497,6 +501,44 @@ async function doLogin(){
     toast("Bağlantı hatası");
     btn.disabled=false; btn.innerHTML=prev;
   }
+}
+
+// ══════════════════════════ İLK GİRİŞ: ŞİFRE BELİRLE ══════════════════════════
+function renderSetPassword(setupToken,creds){
+  app.innerHTML=`
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h2 style="margin:0 0 6px">Kendi şifreni belirle</h2>
+      <p style="margin:0 0 16px;font-size:13px;color:var(--text-secondary)">Bu hesaba ilk kez giriyorsun. Yalnızca senin bildiğin, en az 6 karakterlik bir şifre seç.</p>
+      <label class="field-label">Yeni şifre</label>
+      <input class="input mb16" id="sp-pass" type="password" autocomplete="new-password">
+      <label class="field-label">Yeni şifre (tekrar)</label>
+      <input class="input" id="sp-pass2" type="password" autocomplete="new-password" style="margin-bottom:20px">
+      <button class="btn" id="sp-save"><span>Şifreyi Kaydet ve Giriş Yap</span></button>
+      <a href="./" style="display:block;text-align:center;margin-top:12px;font-size:13px;color:var(--text-secondary);text-decoration:none">← Vazgeç</a>
+    </div>
+  </div>`;
+  $("#sp-save").addEventListener("click",async()=>{
+    const p1=$("#sp-pass").value, p2=$("#sp-pass2").value;
+    if(p1.length<6){ toast("Şifre en az 6 karakter olmalı"); return; }
+    if(p1==="1234"){ toast("Başlangıç şifresini kullanamazsın"); return; }
+    if(/^(.)\1+$/.test(p1)){ toast("Şifre tek tekrarlayan karakterlerden oluşamaz"); return; }
+    if(p1!==p2){ toast("Şifreler aynı değil"); return; }
+    const btn=$("#sp-save"); const prev=btn.innerHTML; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+    try{
+      const r=await api("/api/students/set-password",{method:"POST",body:{setup_token:setupToken,new_password:p1}});
+      if(r.data && r.data.success===true){
+        // Yeni şifreyle giriş formuna dön ve otomatik giriş yap
+        state.loginLevel=creds.level;
+        renderLogin();
+        $("#in-school").value=creds.schoolCode; $("#in-number").value=creds.number; $("#in-pass").value=p1;
+        doLogin();
+      }else{
+        toast((r.data && r.data.message)||"Şifre belirlenemedi");
+        btn.disabled=false; btn.innerHTML=prev;
+      }
+    }catch(e){ toast("Bağlantı hatası"); btn.disabled=false; btn.innerHTML=prev; }
+  });
 }
 
 function routeAfterAuth(){

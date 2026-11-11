@@ -24,6 +24,7 @@ const PUBLIC = [
   ["GET", /^\/health$/],
   ["POST", /^\/api\/users\/login$/],
   ["POST", /^\/api\/students\/login$/],
+  ["POST", /^\/api\/students\/set-password$/],
   ["POST", /^\/api\/students\/register$/],
   ["POST", /^\/api\/schools\/access$/],
   ["GET", /^\/api\/schools\/\d+\/logo$/],

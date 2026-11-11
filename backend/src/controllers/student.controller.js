@@ -1,6 +1,14 @@
 const pool = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const {
+  INITIAL_STUDENT_PASSWORD,
+  validateNewPassword,
+  signSetupToken,
+  verifySetupToken,
+  createLoginThrottle,
+} = require("../utils/studentPassword");
+const loginThrottle = createLoginThrottle();
 const { ensureStudentsUniqueIndex } = require("../config/studentsIndex");
 const ExcelJS = require("exceljs");
 const XLSX = require("xlsx");
@@ -12,7 +20,7 @@ const { resolveActiveStudent } = require("./reservation.controller");
 // Düz metin şifre artık SAKLANMAZ: plain_password sütununa her yazım
 // NULLIF($n::text, $n::text) ile NULL olur (parametre sırası bozulmasın diye
 // sorgularda sütun yerinde bırakıldı). Şifreler yalnızca bcrypt özetiyle tutulur.
-const STUDENT_PASSWORD = "1234";
+const STUDENT_PASSWORD = INITIAL_STUDENT_PASSWORD;
 
 function signStudentToken(user) {
   return jwt.sign(
@@ -29,7 +37,17 @@ function signStudentToken(user) {
   );
 }
 
-const registerStudent = async (req, res, next) => {
+const registerStudent = async (req, res) => {
+  // Kapatıldı: herkese açık bu uç, mevcut öğrencinin şifre özetini üzerine
+  // yazabiliyordu. Uygulama kullanmıyor; öğrenciler okul listesindeki kayıtla girer.
+  return res.status(410).json({
+    success: false,
+    message: "Bu işlem kapatıldı. Okul kütüphanecinizden kayıt isteyin.",
+  });
+};
+
+// eslint-disable-next-line no-unused-vars
+const _legacyRegisterStudent = async (req, res, next) => {
   const client = await pool.connect();
 
   try {
@@ -1158,6 +1176,14 @@ const loginStudent = async (req, res, next) => {
       });
     }
 
+    const throttleKey = `${req.ip}|${schoolCode}|${normalizedLevel}|${student_number}`;
+    if (loginThrottle.blocked(throttleKey)) {
+      return res.status(429).json({
+        success: false,
+        message: "Çok fazla hatalı deneme. Lütfen 15 dakika sonra tekrar dene.",
+      });
+    }
+
     const schemaName = `school_${schoolCode}`;
 
     // 1) Okul kodu geçerli mi?
@@ -1203,13 +1229,8 @@ const loginStudent = async (req, res, next) => {
     );
     const school = schoolInfo.rows[0] || { school_id: null, school_code: schoolCode, school_name: `School ${schoolCode}` };
 
-    // 4) Sabit öğrenci şifresi: tüm öğrenciler "1234" ile giriş yapar.
-    //    (Mail ile şifre alma kaldırıldı; şifreler artık öğrenci bazında tutulmaz.)
-    if (String(password) !== STUDENT_PASSWORD) {
-      return res.status(401).json({ success: false, message: "Şifre hatalı" });
-    }
-
     await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS school_level VARCHAR(50)`);
+    await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_set BOOLEAN DEFAULT FALSE`);
     await pool.query(`ALTER TABLE ${schemaName}.users ADD COLUMN IF NOT EXISTS school_level VARCHAR(50)`);
 
     // Token ve rezervasyon FK'si için öğrencinin bir giriş kaydı olmalı:
@@ -1293,6 +1314,35 @@ const loginStudent = async (req, res, next) => {
         user.user_class = student.class_name;
       }
     }
+
+    // 5) Şifre doğrulama (öğrenciye özel).
+    //    - Kendi şifresini belirlemiş öğrenci: bcrypt özetiyle doğrulanır.
+    //    - Belirlememiş (yeni/sıfırlanmış): yalnızca başlangıç şifresi kabul edilir
+    //      ve tam oturum yerine kısa ömürlü "şifre belirleme" anahtarı verilir.
+    const pwRow = await pool.query(
+      `SELECT password, COALESCE(password_set, FALSE) AS password_set FROM public.users WHERE user_id = $1`,
+      [user.user_id]
+    );
+    const stored = pwRow.rows[0] || {};
+    const fail = () => {
+      loginThrottle.fail(throttleKey);
+      return res.status(401).json({ success: false, message: "Şifre hatalı" });
+    };
+
+    if (stored.password_set) {
+      const ok = stored.password ? await bcrypt.compare(String(password), stored.password) : false;
+      if (!ok) return fail();
+    } else {
+      if (String(password) !== INITIAL_STUDENT_PASSWORD) return fail();
+      loginThrottle.reset(throttleKey);
+      return res.status(200).json({
+        success: false,
+        code: "PASSWORD_SETUP_REQUIRED",
+        message: "İlk girişte kendi şifreni belirlemen gerekiyor. Uygulamayı güncellediysen yeni şifreni seç.",
+        setup_token: signSetupToken(user),
+      });
+    }
+    loginThrottle.reset(throttleKey);
 
     // 6) Token oluştur ve dön
     const token = signStudentToken({
@@ -1579,10 +1629,16 @@ const updateMyProfile = async (req, res, next) => {
     const { user_id } = req.user;
     const { password } = req.body;
 
+    if (password) {
+      const pwError = validateNewPassword(password);
+      if (pwError) return res.status(400).json({ success: false, message: pwError });
+    }
+
     await pool.query(`
       ALTER TABLE public.users
       ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT FALSE
     `);
+    await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_set BOOLEAN DEFAULT FALSE`);
 
     const existing = await pool.query(
       "SELECT * FROM public.users WHERE user_id = $1",
@@ -1607,7 +1663,8 @@ const updateMyProfile = async (req, res, next) => {
       UPDATE public.users
       SET password = $1,
           profile_completed = TRUE,
-          plain_password = NULLIF($3::text, $3::text)
+          password_set = (COALESCE(password_set, FALSE) OR $3::text IS NOT NULL),
+          plain_password = NULL
       WHERE user_id = $2
       RETURNING
         user_id,
@@ -1741,7 +1798,7 @@ const bulkAssignPasswords = async (req, res, next) => {
           [hashedPassword, uid]
         );
         await client.query(
-          `UPDATE public.users SET password = $1, plain_password = NULLIF($3::text, $3::text) WHERE user_id = $2`,
+          `UPDATE public.users SET password = $1, password_set = FALSE, plain_password = NULLIF($3::text, $3::text) WHERE user_id = $2`,
           [hashedPassword, uid, String(defaultPassword)]
         );
         updated++;
@@ -1759,7 +1816,7 @@ const bulkAssignPasswords = async (req, res, next) => {
         if (existingPublicUser.rows.length > 0) {
           userId = existingPublicUser.rows[0].user_id;
           await client.query(
-            `UPDATE public.users SET password = $1, plain_password = NULLIF($3::text, $3::text) WHERE user_id = $2`,
+            `UPDATE public.users SET password = $1, password_set = FALSE, plain_password = NULLIF($3::text, $3::text) WHERE user_id = $2`,
             [hashedPassword, userId, String(defaultPassword)]
           );
         } else {
@@ -1951,6 +2008,60 @@ const deleteStudent = async (req, res, next) => {
 };
 
 // Öğrencinin KENDİ hesabını silmesi (Google Play hesap silme politikası)
+// İlk giriş / sıfırlama sonrası: öğrenci kendi şifresini belirler.
+// Kimlik, giriş cevabındaki kısa ömürlü setup_token ile kanıtlanır.
+const setStudentPassword = async (req, res, next) => {
+  try {
+    const { setup_token, new_password } = req.body || {};
+    const decoded = verifySetupToken(setup_token);
+    if (!decoded) {
+      return res.status(401).json({
+        success: false,
+        message: "Oturum süresi doldu. Lütfen tekrar giriş yap.",
+      });
+    }
+    const pwError = validateNewPassword(new_password);
+    if (pwError) return res.status(400).json({ success: false, message: pwError });
+
+    await pool.query(`ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_set BOOLEAN DEFAULT FALSE`);
+    const hashed = await bcrypt.hash(String(new_password), 10);
+
+    // Yalnızca henüz şifre belirlememiş hesap için: kurulum anahtarı çalınsa bile
+    // belirlenmiş bir şifre bu uçla değiştirilemez.
+    const upd = await pool.query(
+      `UPDATE public.users
+       SET password = $1, password_set = TRUE, plain_password = NULL
+       WHERE user_id = $2 AND user_role = 'student' AND COALESCE(password_set, FALSE) = FALSE
+       RETURNING user_id, school_id`,
+      [hashed, decoded.user_id]
+    );
+    if (upd.rows.length === 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Şifre zaten belirlenmiş. Lütfen şifrenle giriş yap.",
+      });
+    }
+
+    // Okul şemasındaki kopyayı da eşle (hata verirse ana kayıt geçerli kalır)
+    try {
+      const sc = await pool.query(
+        `SELECT school_code FROM public.schools WHERE school_id = $1`,
+        [upd.rows[0].school_id]
+      );
+      const code = sc.rows[0] && String(sc.rows[0].school_code);
+      if (code && /^\d+$/.test(code)) {
+        await pool.query(`UPDATE school_${code}.users SET password = $1 WHERE user_id = $2`, [hashed, decoded.user_id]);
+      }
+    } catch (e) {
+      console.warn("[setStudentPassword] okul şeması kopyası güncellenemedi:", e.message);
+    }
+
+    return res.status(200).json({ success: true, message: "Şifren belirlendi. Şimdi giriş yapabilirsin." });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const deleteMyAccount = async (req, res, next) => {
   const client = await pool.connect();
 
@@ -2063,4 +2174,5 @@ module.exports = {
   bulkAssignPasswords,
   deleteStudent,
   deleteMyAccount,
+  setStudentPassword,
 };

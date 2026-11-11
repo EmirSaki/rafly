@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/student_auth_provider.dart';
 import '../main.dart';
+import 'student_set_password_page.dart';
 
 class StudentLoginPage extends StatefulWidget {
   const StudentLoginPage({super.key});
@@ -45,6 +46,26 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
             studentNumber: studentNumber,
             password: password,
           );
+    } on PasswordSetupRequired catch (setup) {
+      if (!mounted) return;
+      final newPassword = await Navigator.of(context).push<String>(
+        MaterialPageRoute(
+          builder: (_) => StudentSetPasswordPage(setupToken: setup.setupToken),
+        ),
+      );
+      if (newPassword != null && mounted) {
+        // Şifre belirlendi: yeni şifreyle otomatik giriş yap
+        try {
+          await context.read<StudentAuthProvider>().login(
+                schoolCode: schoolCode,
+                schoolLevel: _schoolLevel,
+                studentNumber: studentNumber,
+                password: newPassword,
+              );
+        } catch (e) {
+          _showError(e.toString().replaceAll('Exception: ', ''));
+        }
+      }
     } catch (e) {
       _showError(e.toString().replaceAll('Exception: ', ''));
     } finally {
@@ -151,7 +172,7 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
                       ),
                       const SizedBox(height: 6),
                       const Text(
-                        'Giriş şifreniz: 1234',
+                        'İlk girişte şifre: 1234. Ardından kendi şifreni belirlersin.',
                         style: TextStyle(fontSize: 12, color: kTextSecondary),
                       ),
                       const SizedBox(height: 20),
