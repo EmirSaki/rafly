@@ -76,9 +76,19 @@ async function shutdown(signal) {
   isShuttingDown = true;
   logger.info(`${signal} received, shutting down gracefully.`);
 
+  // Cloud Run SIGTERM'den sonra ~10 sn tanır; bağlantı bekleyip asılı kalmayalım.
+  setTimeout(() => {
+    logger.error("Graceful shutdown timed out, forcing exit");
+    process.exit(1);
+  }, 8000).unref();
+
   try {
     if (serverInstance) {
       await new Promise((resolve) => {
+        // Boştaki keep-alive bağlantıları kapat ki close() beklemesin
+        if (typeof serverInstance.closeIdleConnections === "function") {
+          serverInstance.closeIdleConnections();
+        }
         serverInstance.close(() => {
           logger.info("HTTP server closed");
           resolve();

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -89,5 +90,30 @@ void main() {
     expect(prefs.getString('admin_token'), isNull);
     await client.get(Uri.parse('$api/api/students?schoolCode=1'));
     expect(seen.containsKey('Authorization'), isFalse);
+  });
+
+  test('sunucu yanıt vermezse zaman aşımı fırlatır (ekran sonsuza dek beklemez)', () async {
+    final slow = StaffAuthClient(
+      api,
+      MockClient((request) async {
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        return http.Response('{}', 200);
+      }),
+      const Duration(milliseconds: 50),
+    );
+    expect(
+      () => slow.get(Uri.parse('$api/api/books')),
+      throwsA(isA<TimeoutException>()),
+    );
+  });
+
+  test('zaman aşımı sınırı altında gelen yanıt normal döner', () async {
+    final ok = StaffAuthClient(
+      api,
+      MockClient((request) async => http.Response('{"success":true}', 200)),
+      const Duration(milliseconds: 500),
+    );
+    final res = await ok.get(Uri.parse('$api/api/books'));
+    expect(res.statusCode, 200);
   });
 }

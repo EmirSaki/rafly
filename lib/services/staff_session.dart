@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -82,11 +83,24 @@ class StaffSession {
 ///   (öğrencinin kitap listesi/duyuru istekleri için).
 /// - Token yalnızca API sunucusuna gönderilir.
 /// - Sunucu 401 dönerse personel oturumunu kapatır.
+/// - Sunucu yanıt vermezse ekran sonsuza dek beklemesin diye zaman aşımı uygular
+///   (TimeoutException fırlatır; çağıranlar bunu ağ hatası olarak ele alır).
 class StaffAuthClient extends http.BaseClient {
-  StaffAuthClient(this.apiBaseUrl, [http.Client? inner]) : _inner = inner ?? http.Client();
+  StaffAuthClient(
+    this.apiBaseUrl, [
+    http.Client? inner,
+    this.timeout = const Duration(seconds: 30),
+    this.uploadTimeout = const Duration(seconds: 120),
+  ]) : _inner = inner ?? http.Client();
 
   final String apiBaseUrl;
   final http.Client _inner;
+
+  /// Yanıt başlıkları için en fazla bekleme (soğuk başlayan sunucu dahil).
+  final Duration timeout;
+
+  /// Dosya/görsel yüklemeleri daha yavaş ağlarda uzun sürebilir.
+  final Duration uploadTimeout;
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
@@ -100,7 +114,8 @@ class StaffAuthClient extends http.BaseClient {
       }
     }
 
-    final response = await _inner.send(request);
+    final limit = request is http.MultipartRequest ? uploadTimeout : timeout;
+    final response = await _inner.send(request).timeout(limit);
 
     final isLogin = request.url.path.endsWith('/login');
     if (response.statusCode == 401 && isApi && !hasOwnAuth && !isLogin) {

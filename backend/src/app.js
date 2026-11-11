@@ -72,7 +72,6 @@ app.get("/health", async (req, res) => {
     res.status(500).json({
       success: false,
       db: false,
-      error: error.message,
       build: BUILD_MARKER,
     });
   }

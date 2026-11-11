@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -27,6 +28,32 @@ const Color kWarning = Color(0xFFF59E0B);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Beklenmeyen hatalar uygulamayı düşürmesin. Ek SDK/maliyet yok: hata
+  // yalnızca yerel olarak günlüklenir ve cihazdan dışarı gönderilmez.
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('Yakalanmamış hata: $error');
+    return true; // işlendi, süreç sonlanmasın
+  };
+  // Bir widget çizilirken hata olursa kırmızı/gri ekran yerine sade bir mesaj
+  ErrorWidget.builder = (details) => Material(
+        color: const Color(0xFFF9FAFB),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              kDebugMode
+                  ? details.exceptionAsString()
+                  : 'Bu bölüm şu anda yüklenemedi. Lütfen geri dönüp tekrar deneyin.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+            ),
+          ),
+        ),
+      );
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.dark,

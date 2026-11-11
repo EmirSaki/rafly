@@ -46,7 +46,12 @@ class StudentAuthProvider extends ChangeNotifier {
           await _clearSession();
         }
       } catch (_) {
-        await _clearSession();
+        // Ağ yok / sunucu yanıt vermedi / geçici hata: oturumu SİLME. Yalnızca
+        // sunucu "geçersiz" derse (yukarıdaki dal) çıkış yapılır. Profil verisi
+        // bağlantı gelince `refreshProfile` ile tazelenir.
+        _user = <String, dynamic>{};
+        _loggedIn = true;
+        _profileCompleted = true;
       }
     }
 

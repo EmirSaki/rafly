@@ -40,6 +40,14 @@ function verifySetupToken(token) {
 // Bellek içi deneme sınırı: aynı anahtar için pencere içinde en fazla `max` hatalı deneme.
 function createLoginThrottle({ max = 8, windowMs = 15 * 60 * 1000, now = () => Date.now() } = {}) {
   const hits = new Map();
+  const MAX_KEYS = 5000; // rastgele anahtarlarla belleği şişirmeyi önler
+  const prune = () => {
+    const t = now();
+    for (const [k, list] of hits) {
+      if (!list.some((x) => t - x < windowMs)) hits.delete(k);
+    }
+    if (hits.size > MAX_KEYS) hits.clear();
+  };
   const fresh = (key) => {
     const t = now();
     const list = (hits.get(key) || []).filter((x) => t - x < windowMs);
@@ -48,7 +56,10 @@ function createLoginThrottle({ max = 8, windowMs = 15 * 60 * 1000, now = () => D
   };
   return {
     blocked: (key) => fresh(key).length >= max,
-    fail: (key) => { const list = fresh(key); list.push(now()); hits.set(key, list); },
+    fail: (key) => {
+      if (hits.size >= MAX_KEYS) prune();
+      const list = fresh(key); list.push(now()); hits.set(key, list);
+    },
     reset: (key) => hits.delete(key),
   };
 }
