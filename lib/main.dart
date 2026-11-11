@@ -7,9 +7,9 @@ import 'providers/student_auth_provider.dart';
 import 'pages/school_login_page.dart';
 import 'pages/home_page.dart';
 import 'services/notification_service.dart';
+import 'services/staff_session.dart';
 import 'student/student_login_page.dart';
 import 'student/student_main_shell.dart';
-import 'student/student_profile_setup_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -32,6 +32,24 @@ void main() async {
     statusBarIconBrightness: Brightness.dark,
   ));
   await NotificationService.init();
+
+  // Personel oturumu sunucuda geçersizse (süresi dolmuş/eksik token) giriş
+  // ekranına dön ve nedenini söyle.
+  StaffSession.onSessionExpired = () async {
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) return;
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const RoleSelectionPage()),
+      (route) => false,
+    );
+    final context = navigatorKey.currentContext;
+    if (context != null && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Oturumunuzun süresi doldu. Lütfen yeniden giriş yapın.')),
+      );
+    }
+  };
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => StudentAuthProvider(),
@@ -299,7 +317,7 @@ class RoleSelectionPage extends StatelessWidget {
                   ],
                 ),
                 const Text(
-                  'Rafly v1.0.1',
+                  'Rafly v1.0.2',
                   style: TextStyle(fontSize: 11, color: kTextSecondary),
                 ),
               ],
@@ -410,7 +428,6 @@ class StudentAuthGate extends StatelessWidget {
     }
 
     if (!auth.isLoggedIn) return const StudentLoginPage();
-    if (!auth.profileCompleted) return const StudentProfileSetupScreen();
     return const StudentMainShell();
   }
 }

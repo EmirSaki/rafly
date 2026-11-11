@@ -327,7 +327,8 @@ const app = $("#app");
 // ── API helper ──
 async function api(path,{method="GET",body=null,auth=false}={}){
   const headers={"Content-Type":"application/json"};
-  if(auth && state.token) headers["Authorization"]="Bearer "+state.token;
+  // Oturum varsa her istekte gönderilir (kitap listesi/duyurular da yetki ister).
+  if(state.token) headers["Authorization"]="Bearer "+state.token;
   const res=await fetch(API+path,{method,headers,body:body?JSON.stringify(body):null});
   let data={};
   try{ data=await res.json(); }catch(_){}

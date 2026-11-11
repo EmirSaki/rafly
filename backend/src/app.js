@@ -12,6 +12,8 @@ const studentRoutes = require("./routes/student.routes");
 const announcementRoutes = require("./routes/announcement.routes");
 const { getStudents } = require("./controllers/student.controller");
 const { loanBookByStudent } = require("./controllers/reservation.controller");
+const { authGate } = require("./middlewares/auth.gate");
+const { requireAdminKey } = require("./middlewares/staff.middleware");
 
 const app = express();
 const BUILD_MARKER = "plain-password-final-2026-05-26";
@@ -76,7 +78,7 @@ app.get("/health", async (req, res) => {
   }
 });
 
-app.get("/debug/routes", (req, res) => {
+app.get("/debug/routes", requireAdminKey, (req, res) => {
   const routes = [];
 
   function collectRoutes(stack, prefix = "") {
@@ -106,6 +108,9 @@ app.get("/debug/routes", (req, res) => {
     routes,
   });
 });
+
+// Yetki kapısı: bkz. middlewares/auth.gate.js (AUTH_MODE=enforce ile zorunlu olur)
+app.use(authGate);
 
 app.use("/api/books", bookRoutes);
 app.use("/api/users", userRoutes);

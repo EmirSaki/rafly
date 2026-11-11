@@ -49,6 +49,39 @@ void main() {
     expect(seen.containsKey('Authorization'), isFalse);
   });
 
+  test('personel oturumu yoksa öğrenci tokenı eklenir', () async {
+    SharedPreferences.setMockInitialValues({'student_token': 'ogr-1'});
+    await client.get(Uri.parse('$api/api/schools/1/books'));
+    expect(seen['Authorization'], 'Bearer ogr-1');
+  });
+
+  test('401 gelirse personel oturumu kapatılır ve giriş ekranı istenir', () async {
+    SharedPreferences.setMockInitialValues({'app_role': 'admin', 'admin_school_code': '1'});
+    await StaffSession.save('eski-token');
+    var expired = 0;
+    StaffSession.onSessionExpired = () async => expired++;
+    final rejecting = StaffAuthClient(api, MockClient((_) async => http.Response('{}', 401)));
+    await rejecting.get(Uri.parse('$api/api/students?schoolCode=1'));
+    final prefs = await SharedPreferences.getInstance();
+    expect(expired, 1);
+    expect(prefs.getString('app_role'), isNull);
+    expect(prefs.getString('admin_token'), isNull);
+    StaffSession.onSessionExpired = null;
+  });
+
+  test('401 öğrenci oturumunu kapatmaz; hatalı giriş denemesi de oturum kapatmaz', () async {
+    SharedPreferences.setMockInitialValues({'app_role': 'student', 'student_token': 'ogr-1'});
+    var expired = 0;
+    StaffSession.onSessionExpired = () async => expired++;
+    final rejecting = StaffAuthClient(api, MockClient((_) async => http.Response('{}', 401)));
+    await rejecting.get(Uri.parse('$api/api/schools/1/books'));
+    await rejecting.post(Uri.parse('$api/api/users/login'));
+    final prefs = await SharedPreferences.getInstance();
+    expect(expired, 0);
+    expect(prefs.getString('student_token'), 'ogr-1');
+    StaffSession.onSessionExpired = null;
+  });
+
   test('çıkışta token silinir ve kalıcı depodan da kalkar', () async {
     await StaffSession.save('abc123');
     await StaffSession.clear();

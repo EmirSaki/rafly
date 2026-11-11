@@ -81,14 +81,29 @@ class MainActivity : FlutterActivity() {
         bytes: ByteArray
     ): String {
 
-        val file = File(
-            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-            fileName
-        )
-
-        FileOutputStream(file).use {
-            it.write(bytes)
-            it.flush()
+        // Android 9 ve altında ortak İndirilenler klasörü çalışma zamanı depolama
+        // izni ister. İzin yoksa (ya da klasöre yazılamazsa) dosya, izin
+        // gerektirmeyen uygulamaya özel klasöre yazılır ve oradan açılır.
+        val file = try {
+            val publicDir =
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (!publicDir.exists()) publicDir.mkdirs()
+            File(publicDir, fileName).also { target ->
+                FileOutputStream(target).use {
+                    it.write(bytes)
+                    it.flush()
+                }
+            }
+        } catch (e: Exception) {
+            val appDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
+                ?: throw Exception("Depolama alanına erişilemedi")
+            if (!appDir.exists()) appDir.mkdirs()
+            File(appDir, fileName).also { target ->
+                FileOutputStream(target).use {
+                    it.write(bytes)
+                    it.flush()
+                }
+            }
         }
 
         val uri = FileProvider.getUriForFile(

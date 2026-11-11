@@ -9,6 +9,9 @@ const XLSX = require("xlsx");
 // öğrenciler okul kodu + seviye + numara + bu şifre ile giriş yapar.
 const { resolveActiveStudent } = require("./reservation.controller");
 
+// Düz metin şifre artık SAKLANMAZ: plain_password sütununa her yazım
+// NULLIF($n::text, $n::text) ile NULL olur (parametre sırası bozulmasın diye
+// sorgularda sütun yerinde bırakıldı). Şifreler yalnızca bcrypt özetiyle tutulur.
 const STUDENT_PASSWORD = "1234";
 
 function signStudentToken(user) {
@@ -191,7 +194,7 @@ const registerStudent = async (req, res, next) => {
             user_class = $3,
             user_class_code = $4,
             password = $5,
-            plain_password = $7,
+            plain_password = NULLIF($7::text, $7::text),
             school_level = $8
         WHERE user_id = $6
         RETURNING
@@ -235,7 +238,7 @@ const registerStudent = async (req, res, next) => {
           plain_password,
           school_level
         )
-        VALUES ($1, $2, 'student', $3, $4, $5, $6, NULL, $7, $8, $9)
+        VALUES ($1, $2, 'student', $3, $4, $5, $6, NULL, $7, NULLIF($8::text, $8::text), $9)
         RETURNING
           user_id,
           user_name,
@@ -1109,7 +1112,7 @@ const createManualStudent = async (req, res, next) => {
         const publicUser = await client.query(
           `INSERT INTO public.users
            (user_name, user_surname, user_role, student_id, user_class, user_class_code, school_id, email, password, plain_password, school_level)
-           VALUES ($1, $2, 'student', $3, $4, $5, $6, NULL, $7, $8, $9)
+           VALUES ($1, $2, 'student', $3, $4, $5, $6, NULL, $7, NULLIF($8::text, $8::text), $9)
            RETURNING user_id`,
           [firstName, lastName, studentNumber, className, classCode || className, schoolId, hashedPassword, defaultPassword, schoolLevel]
         );
@@ -1250,7 +1253,7 @@ const loginStudent = async (req, res, next) => {
         const newPublic = await pool.query(
           `INSERT INTO public.users
            (user_name, user_surname, user_role, student_id, user_class, user_class_code, school_id, email, password, plain_password, school_level)
-           VALUES ($1, $2, 'student', $3, $4, $5, $6, NULL, $7, $8, $9)
+           VALUES ($1, $2, 'student', $3, $4, $5, $6, NULL, $7, NULLIF($8::text, $8::text), $9)
            RETURNING *`,
           [
             firstName, lastName, student_number,
@@ -1604,7 +1607,7 @@ const updateMyProfile = async (req, res, next) => {
       UPDATE public.users
       SET password = $1,
           profile_completed = TRUE,
-          plain_password = COALESCE($3, plain_password)
+          plain_password = NULLIF($3::text, $3::text)
       WHERE user_id = $2
       RETURNING
         user_id,
@@ -1738,7 +1741,7 @@ const bulkAssignPasswords = async (req, res, next) => {
           [hashedPassword, uid]
         );
         await client.query(
-          `UPDATE public.users SET password = $1, plain_password = $3 WHERE user_id = $2`,
+          `UPDATE public.users SET password = $1, plain_password = NULLIF($3::text, $3::text) WHERE user_id = $2`,
           [hashedPassword, uid, String(defaultPassword)]
         );
         updated++;
@@ -1756,14 +1759,14 @@ const bulkAssignPasswords = async (req, res, next) => {
         if (existingPublicUser.rows.length > 0) {
           userId = existingPublicUser.rows[0].user_id;
           await client.query(
-            `UPDATE public.users SET password = $1, plain_password = $3 WHERE user_id = $2`,
+            `UPDATE public.users SET password = $1, plain_password = NULLIF($3::text, $3::text) WHERE user_id = $2`,
             [hashedPassword, userId, String(defaultPassword)]
           );
         } else {
           const ins = await client.query(
             `INSERT INTO public.users
              (user_name, user_surname, user_role, student_id, user_class, user_class_code, school_id, email, password, plain_password, school_level)
-             VALUES ($1, $2, 'student', $3, $4, $5, $6, NULL, $7, $8, $9)
+             VALUES ($1, $2, 'student', $3, $4, $5, $6, NULL, $7, NULLIF($8::text, $8::text), $9)
              RETURNING user_id`,
             [
               firstName,
