@@ -49,3 +49,6 @@ app.*.map.json
 *.jks
 *.keystore
 build/
+
+# graphify çıktıları (üretilebilir, büyük)
+graphify-out/
