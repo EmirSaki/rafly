@@ -183,6 +183,27 @@ class _StudentListPageState extends State<StudentListPage> {
     }
   }
 
+  // Arşivdeki (Eski Öğrenciler) "diğer" numaraları: sunucu bu numaraları yeniden
+  // vermez, önizleme de vermesin diye ayrıca yüklenir.
+  Set<int> _archivedDigerNumbers = {};
+
+  Future<void> _loadArchivedDigerNumbers() async {
+    try {
+      final archived = await ApiService.getStudents(
+        schoolCode: widget.schoolCode,
+        schoolLevel: "diğer",
+        archived: true,
+      );
+      _archivedDigerNumbers = {
+        for (final s in archived)
+          int.tryParse(s["student_number"]?.toString() ?? "") ?? 0,
+      }..removeWhere((n) => n < 10000);
+    } catch (_) {
+      // Liste alınamazsa önizleme eski yöntemle hesaplanır; asıl numarayı
+      // zaten sunucu atar ve başarı mesajında gösterir.
+    }
+  }
+
   String _nextDigerNumber() {
     // 10000'den itibaren boş olan ilk numarayı bul (10000, 10001, ...).
     // Eski/anormal yüksek numaralar yok sayılır; her zaman 10000'den gider.
@@ -193,6 +214,7 @@ class _StudentListPageState extends State<StudentListPage> {
       final num = int.tryParse(s["student_number"]?.toString() ?? "") ?? 0;
       if (num >= 10000) used.add(num);
     }
+    used.addAll(_archivedDigerNumbers);
     int next = 10000;
     while (used.contains(next)) {
       next++;
@@ -208,6 +230,12 @@ class _StudentListPageState extends State<StudentListPage> {
     if (addStudentLevel == "diğer") {
       studentNumberController.text = _nextDigerNumber();
     }
+    // Arşiv numaraları gelince önizlemeyi düzelt (diyalog açılmasını bekletmez)
+    _loadArchivedDigerNumbers().then((_) {
+      if (mounted && addStudentLevel == "diğer") {
+        studentNumberController.text = _nextDigerNumber();
+      }
+    });
 
     showDialog(
       context: context,

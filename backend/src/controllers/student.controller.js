@@ -995,13 +995,15 @@ const createManualStudent = async (req, res, next) => {
       });
     }
 
-    const studentNumber = String(student_number ?? "").trim();
+    let studentNumber = String(student_number ?? "").trim();
     const fullName = String(full_name ?? "").trim();
     const className = String(class_name ?? "").trim().toLocaleUpperCase("tr-TR");
     const classCode = String(class_code ?? className).trim().toLocaleUpperCase("tr-TR");
     const schoolLevel = String(school_level ?? "").trim().toLocaleLowerCase("tr-TR");
 
-    if (!studentNumber || !fullName || !className || !schoolLevel) {
+    // "diğer" seviyesinde numarayı sunucu atar (aşağıda); istemcinin değeri yok sayılır.
+    const isDiger = schoolLevel === "diğer";
+    if ((!studentNumber && !isDiger) || !fullName || !className || !schoolLevel) {
       return res.status(400).json({
         success: false,
         message: "Öğrenci numarası, ad soyad, sınıf ve okul seviyesi zorunlu",
@@ -1047,6 +1049,44 @@ const createManualStudent = async (req, res, next) => {
       ALTER TABLE ${schemaName}.students
       ADD COLUMN IF NOT EXISTS school_level VARCHAR(50)
     `);
+
+    if (isDiger) {
+      // Sıradaki boş numara: AKTİF + ARŞİV öğrenciler ve mevcut giriş hesapları
+      // birlikte dikkate alınır. Arşivdeki birinin numarası yeniden verilirse
+      // yeni kişi eski kişinin giriş hesabına bağlanırdı.
+      await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
+        `${schemaName}:diger_student_number`,
+      ]);
+      await client.query(
+        `ALTER TABLE ${schemaName}.users ADD COLUMN IF NOT EXISTS school_level VARCHAR(50)`
+      );
+      const nextNo = await client.query(
+        `
+        WITH nums AS (
+          SELECT CASE WHEN student_number::text ~ '^[0-9]{1,15}$'
+                      THEN student_number::text::bigint END AS n
+          FROM ${schemaName}.students
+          WHERE LOWER(COALESCE(school_level, '')) = 'diğer'
+          UNION
+          SELECT CASE WHEN student_id::text ~ '^[0-9]{1,15}$'
+                      THEN student_id::text::bigint END AS n
+          FROM ${schemaName}.users
+          WHERE user_role = 'student'
+            AND LOWER(COALESCE(school_level, '')) = 'diğer'
+        ),
+        used AS (SELECT n FROM nums WHERE n IS NOT NULL AND n >= 10000)
+        SELECT COALESCE(MIN(c), 10000) AS next_no
+        FROM (
+          SELECT 10000::bigint AS c
+          WHERE NOT EXISTS (SELECT 1 FROM used WHERE n = 10000)
+          UNION ALL
+          SELECT n + 1 FROM used
+          WHERE NOT EXISTS (SELECT 1 FROM used u2 WHERE u2.n = used.n + 1)
+        ) candidates
+        `
+      );
+      studentNumber = String(nextNo.rows[0].next_no);
+    }
 
     const existingStudent = await client.query(
       `
@@ -1152,7 +1192,9 @@ const createManualStudent = async (req, res, next) => {
 
     return res.status(201).json({
       success: true,
-      message: "Öğrenci başarıyla eklendi",
+      message: isDiger
+        ? `Öğrenci başarıyla eklendi (No: ${studentNumber})`
+        : "Öğrenci başarıyla eklendi",
       data: result.rows[0],
     });
   } catch (error) {

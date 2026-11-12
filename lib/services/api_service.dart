@@ -164,10 +164,13 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getStudents({
     required String schoolCode,
     String? schoolLevel,
+    bool archived = false,
   }) async {
-    final query = schoolLevel == null || schoolLevel.trim().isEmpty
+    var query = schoolLevel == null || schoolLevel.trim().isEmpty
         ? "schoolCode=$schoolCode"
         : "schoolCode=$schoolCode&school_level=${Uri.encodeComponent(schoolLevel.trim().toLowerCase())}";
+    // Yalnızca "Eski Öğrenciler" (arşiv) listesi
+    if (archived) query += "&archived=true";
 
     final url = Uri.parse("$baseUrl/api/students?$query");
 
