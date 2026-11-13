@@ -641,17 +641,42 @@ function CoverEditor({
   async function onFileSelected(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = ""; // ayni dosya tekrar secilebilsin
-    if (!file) return;
-    if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
-      toast.error("Sadece JPG, PNG ve WebP desteklenir");
+    if (file) await handleFile(file);
+  }
+
+  // Kunye acikken panodaki gorsel Ctrl+V ile kapak olarak alinir
+  // (ör. bir siteden "Resmi kopyala" ya da ekran alintisi).
+  const handleFileRef = useRef(handleFile);
+  handleFileRef.current = handleFile;
+  useEffect(() => {
+    if (!hasIsbn) return;
+    function onPaste(e: ClipboardEvent) {
+      const item = Array.from(e.clipboardData?.items || []).find(
+        (i) => i.kind === "file" && i.type.startsWith("image/")
+      );
+      const file = item?.getAsFile();
+      if (!file) return; // metin yapistirma normal calismaya devam etsin
+      e.preventDefault();
+      void handleFileRef.current(file);
+    }
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [hasIsbn]);
+
+  async function handleFile(file: File) {
+    if (busy) return;
+    // Gorsel her durumda JPEG'e cevrildigi icin tarayicinin acabildigi
+    // her bicim (PNG, WebP, GIF, BMP...) kabul edilir.
+    if (!file.type.startsWith("image/")) {
+      toast.error("Lütfen bir görsel seçin");
       return;
     }
     try {
       const blob = await resizeCoverImage(file);
       setPending(blob);
       setPreviewUrl(URL.createObjectURL(blob));
-    } catch (err) {
-      toast.error(getErrorMessage(err));
+    } catch {
+      toast.error("Bu görsel açılamadı, JPG ya da PNG deneyin");
     }
   }
 
@@ -713,7 +738,7 @@ function CoverEditor({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept="image/*"
         className="hidden"
         onChange={onFileSelected}
       />
@@ -741,6 +766,9 @@ function CoverEditor({
             <ImagePlus size={14} className="mr-1" />
             {currentUrl ? "Değiştir" : "Kapak Ekle"}
           </Button>
+          <p className="text-[11px] leading-tight text-muted-foreground">
+            veya görseli kopyalayıp Ctrl+V ile yapıştırın
+          </p>
           {currentUrl && (
             <Button
               size="sm"
