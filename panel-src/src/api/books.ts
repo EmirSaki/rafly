@@ -105,3 +105,22 @@ export async function getSchoolBooksPage(schoolCode: string, page: number, searc
  return data;
 }
 
+
+// Kapak ISBN'e bağlıdır: aynı ISBN'li kitabı bulunduran tüm okullarda görünür.
+export async function uploadBookCover(isbn: string, image: Blob, fileName = "kapak.jpg") {
+  const formData = new FormData();
+  formData.append("cover", image, fileName);
+  const { data } = await apiClient.post<
+    ApiResponse<{ isbn: string; cover_url: string; updatedBooks: number }>
+  >(`/api/books/isbn/${encodeURIComponent(isbn)}/cover`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return data;
+}
+
+export async function deleteBookCover(isbn: string) {
+  const { data } = await apiClient.delete<ApiResponse<unknown>>(
+    `/api/books/isbn/${encodeURIComponent(isbn)}/cover`
+  );
+  return data;
+}

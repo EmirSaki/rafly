@@ -1,6 +1,6 @@
-import { FormEvent, Suspense, lazy, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Trash2, Pencil, Download, BookOpen, Camera, Info } from "lucide-react";
+import { Plus, Search, Trash2, Pencil, Download, BookOpen, Camera, Info, ImagePlus } from "lucide-react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
@@ -16,6 +16,8 @@ import {
   addBookToSchool,
   updateSchoolBookQuantity,
   deleteSchoolBook,
+  uploadBookCover,
+  deleteBookCover,
   type UpdateSchoolBookPayload,
 } from "@/api/books";
 import { getErrorMessage, getErrorStatus } from "@/api/client";
@@ -482,17 +484,12 @@ function BookDetailForm({
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
-        <div className="h-36 w-24 flex-shrink-0 overflow-hidden rounded-md border border-border bg-muted flex items-center justify-center">
-          {coverUrl ? (
-            <img
-              src={coverUrl}
-              alt={book.title}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <BookOpen size={28} className="text-muted-foreground" />
-          )}
-        </div>
+        <CoverEditor
+          isbn={book.isbn || ""}
+          title={book.title}
+          initialUrl={coverUrl}
+          onChanged={onSaved}
+        />
         <div className="min-w-0 flex-1 space-y-2">
           <div>
             <p className="text-xs text-muted-foreground mb-1">ISBN</p>
@@ -578,6 +575,189 @@ function BookDetailForm({
           Güncelle
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Secilen gorseli tarayicida kucultup JPEG'e cevirir (mobildeki gibi
+ * en fazla 800x1200, %75 kalite). Backend 5 MB ustunu reddediyor; buyuk
+ * telefon fotograflari bu sayede sorunsuz yuklenir.
+ */
+async function resizeCoverImage(file: File): Promise<Blob> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 800 / bitmap.width, 1200 / bitmap.height);
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Görsel işlenemedi");
+  ctx.fillStyle = "#ffffff"; // seffaf PNG'ler JPEG'de siyah olmasin
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+  return new Promise((resolve, reject) =>
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("Görsel işlenemedi"))),
+      "image/jpeg",
+      0.75
+    )
+  );
+}
+
+function CoverEditor({
+  isbn,
+  title,
+  initialUrl,
+  onChanged,
+}: {
+  isbn: string;
+  title: string;
+  initialUrl: string;
+  onChanged: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [currentUrl, setCurrentUrl] = useState(initialUrl);
+  const [failed, setFailed] = useState(false);
+  const [pending, setPending] = useState<Blob | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const normalizedIsbn = normalizeIsbn(isbn);
+  const hasIsbn = normalizedIsbn.length === 10 || normalizedIsbn.length === 13;
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  function clearPending() {
+    setPending(null);
+    setPreviewUrl(null);
+  }
+
+  async function onFileSelected(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // ayni dosya tekrar secilebilsin
+    if (!file) return;
+    if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
+      toast.error("Sadece JPG, PNG ve WebP desteklenir");
+      return;
+    }
+    try {
+      const blob = await resizeCoverImage(file);
+      setPending(blob);
+      setPreviewUrl(URL.createObjectURL(blob));
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  }
+
+  async function upload() {
+    if (!pending) return;
+    setBusy(true);
+    try {
+      const res = await uploadBookCover(normalizedIsbn, pending);
+      setCurrentUrl(res.data?.cover_url || "");
+      setFailed(false);
+      clearPending();
+      toast.success(res.message || "Kapak kaydedildi");
+      onChanged();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm("Kapak kaldırılsın mı? Bu kitabı bulunduran tüm okullarda kaldırılır.")) {
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await deleteBookCover(normalizedIsbn);
+      setCurrentUrl("");
+      toast.success(res.message || "Kapak kaldırıldı");
+      onChanged();
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const shownUrl = previewUrl || (failed ? "" : currentUrl);
+
+  return (
+    <div className="w-28 flex-shrink-0 space-y-2">
+      <div
+        className={
+          "h-40 w-28 overflow-hidden rounded-md border bg-muted flex items-center justify-center " +
+          (pending ? "border-primary ring-2 ring-primary/30" : "border-border")
+        }
+      >
+        {shownUrl ? (
+          <img
+            src={shownUrl}
+            alt={title}
+            className="h-full w-full object-cover"
+            onError={() => !previewUrl && setFailed(true)}
+          />
+        ) : (
+          <BookOpen size={28} className="text-muted-foreground" />
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={onFileSelected}
+      />
+      {pending ? (
+        <div className="space-y-1.5">
+          <p className="text-[11px] leading-tight text-muted-foreground">
+            Bu kapak, aynı kitabı bulunduran tüm okullarda görünecek.
+          </p>
+          <Button size="sm" className="w-full" onClick={upload} loading={busy}>
+            Yükle
+          </Button>
+          <Button size="sm" variant="ghost" className="w-full" onClick={clearPending} disabled={busy}>
+            Vazgeç
+          </Button>
+        </div>
+      ) : hasIsbn ? (
+        <div className="space-y-1.5">
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+          >
+            <ImagePlus size={14} className="mr-1" />
+            {currentUrl ? "Değiştir" : "Kapak Ekle"}
+          </Button>
+          {currentUrl && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full text-destructive"
+              onClick={remove}
+              loading={busy}
+            >
+              Kaldır
+            </Button>
+          )}
+        </div>
+      ) : (
+        <p className="text-[11px] leading-tight text-muted-foreground">
+          ISBN olmadığı için kapak eklenemez.
+        </p>
+      )}
     </div>
   );
 }
